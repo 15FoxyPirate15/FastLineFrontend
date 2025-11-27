@@ -1,0 +1,313 @@
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-image: linear-gradient(-45deg,#181e41 10%,#383286 30%, #181e41 100%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.main-block{
+    display: flex;
+    background-color: ;
+    width: 1650px;
+    height: 719px;
+    margin-top: 100px;
+    margin-bottom: 100px;
+    margin-left: 90px;
+    margin-right: 90px;
+}
+.definition{
+  margin-left: 110px;
+  margin-top: 100px;
+  background-color: ;
+  width: 444px;
+  height: 500px;
+}
+.fastline-header{
+  display: flex;
+  align-items: center;
+}
+.fastline-icon{
+    width: 50px;
+    height: 50px;
+    background-color: #5D43C3;
+    border-radius: 10px;
+}
+.fastline-title{
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin-left: 15px;
+  font-weight: 380;
+  font-size: 30px;
+  color: white;
+}
+.fastline-description{
+  opacity: 0.5;
+  color: whitesmoke;
+  margin-top: auto;
+  margin-bottom: 60px;
+  line-height: 1.5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+
+.encryption-header{
+  display: flex;
+  align-items: center;
+}
+.encryption-icon{
+  width: 30px;
+  height: 30px;
+  background-color: #6C2A88;
+  border-radius: 10px;
+}
+.encryption-title{
+  margin-left: 15px;
+  font-weight: 380;
+  margin-top: -5px;
+  margin-bottom: 5px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: white;
+}
+.encryption-description{
+  margin-top: -10px;
+  margin-bottom: 50px;
+  margin-left: 45px;
+  line-height: 1.5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  opacity: 0.5;
+  color: whitesmoke;
+}
+.realtime-header{
+  display: flex;
+  align-items: center;
+}
+.realtime-icon{
+  width: 30px;
+  height: 30px;
+  background-color: #4795EE;
+  border-radius: 10px;
+}
+.realtime-title{
+  margin-left: 15px;
+  font-weight: 380;
+  margin-top: -5px;
+  margin-bottom: 5px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: white;
+}
+.realtimen-description{
+  margin-top: -10px;
+  margin-bottom: 50px;
+  margin-left: 45px;
+  line-height: 1.5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  opacity: 0.5;
+  color: whitesmoke;
+}
+
+
+.management-header{
+  display: flex;
+  align-items: center;
+}
+.management-icon{
+  width: 30px;
+  height: 30px;
+  background-color:#5F58D3;
+  border-radius: 10px;
+}
+.management-title{
+  margin-left: 15px;
+  font-weight: 380;
+  margin-top: -5px;
+  margin-bottom: 5px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: white;
+}
+.management-description{
+  margin-top: -10px;
+  margin-left: 45px;
+  line-height: 1.5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  opacity: 0.5;
+  color: whitesmoke;
+}
+
+
+
+.registration-form{
+  box-shadow: 
+        0px
+        0px
+        50px
+        0px
+        rgba(0, 0, 0, 0.5);
+  border-radius: 20px;
+  margin-left: 550px;
+  background-image: linear-gradient(135deg, #181e41, #383286);
+  height: 719px;
+  width: 450px;
+}
+
+.form-header{
+  margin-top: 25px;
+  margin-left: 25px;
+}
+.form-title{
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: white;
+  font-weight: 450;
+}
+.form-description{
+  color: whitesmoke;
+  margin-top: -15px;
+  line-height: 1.5;
+  opacity: 0.5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.form-entrname{
+  margin-left: 25px;
+}
+.form-entrname-title{
+  margin-top: 40px;
+  margin-bottom: 10px;
+  font-family: "Syne", sans-serif;
+  opacity: 0.67;
+  font-size: 14px;
+  color: whitesmoke;
+  font-weight: 450;
+}
+.form-input{
+  width: 300px;
+  padding: 10px 50px;
+  border-radius: 8px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #151B40;
+  border: #151B40;
+  color:#d3d6e280;
+}
+.registration-field{
+  margin-bottom: 20px;
+  font-size: 15px;
+}
+.form-email{
+  margin-left: 25px;
+  margin-top: -20px;
+}
+.form-email-title{
+  margin-top: 40px;
+  margin-bottom: 10px;
+  font-family: "Syne", sans-serif;
+  opacity: 0.67;
+  font-size: 14px;
+  color: whitesmoke;
+  font-weight: 450;
+}
+.form-input-email{
+  width: 300px;
+  padding: 10px 50px;
+  border-radius: 8px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #151B40;
+  border: #151B40;
+  color:#d3d6e280;
+}
+.registration-field-email{
+  margin-bottom: 20px;
+  font-size: 15px;
+}
+
+.form-password{
+  margin-left: 25px;
+  margin-top: -20px;
+}
+.form-password-title{
+  margin-top: 40px;
+  margin-bottom: 10px;
+  font-family: "Syne", sans-serif;
+  opacity: 0.67;
+  font-size: 14px;
+  color: whitesmoke;
+  font-weight: 450;
+}
+.form-input-password{
+  width: 300px;
+  padding: 10px 50px;
+  border-radius: 8px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #151B40;
+  border: #151B40;
+  color:#d3d6e280;
+}
+.registration-field-password{
+  margin-bottom: 20px;
+  font-size: 15px;
+}
+.form-agreement{
+  margin-left: 20px;
+  display: flex;
+  align-items: center;
+}
+.agreement-checkbox{
+  border-radius: 5px;
+  width: 15px;
+}
+.agreement-text{
+  margin-bottom: 22px;
+  margin-left: 12px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: whitesmoke;
+  font-size: 15px;
+  font-weight: 400;
+  opacity: 0.7;
+}
+.agreement-link{
+  text-decoration: none;
+  color: #AB4CFF;
+}
+.agreement-link:hover{
+  color: #62166C;
+}
+.form-button{
+  margin-top: 10px;
+  margin-left: 25px;
+}
+.button{
+  width: 400px;
+  height: 50px;
+  padding: 10px 50px;
+  border-radius: 8px;
+  font-size: 17px;
+  color: white;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #6C2A88;
+  border: #6C2A88;
+}
+.button:hover{
+  background-color: #62166C;
+}
+.form-signin{
+  margin-top: 80px;
+  display: flex;
+  justify-content: center;
+}
+.signin-text{
+  color: whitesmoke;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  opacity: 0.7;
+  font-size: 13px;
+  font-weight: 400;
+}
+.signin-link{
+  text-decoration: none;
+  color: #AB4CFF;
+}
+.signin-link:hover{
+  color: #62166C;
+}
