@@ -2,8 +2,6 @@ const form = document.getElementById('createAccountForm');
 
 
 
-const backendEndpoint = 'https://api.fastline.com/register'; // не працююча адреса треба серверну!!!!
-
 if (form) {
     form.addEventListener('submit', function (event) {
         event.preventDefault();
@@ -18,7 +16,7 @@ if (form) {
             email: formData.get('email'),
             password: formData.get('password')
         };
-        const backendEndpoint = 'https://api.fastline.com/register'; //////////!!!!!!!!!!! те саме
+        const backendEndpoint = 'https://fastline-host.onrender.com/auth/register'; //////////!!!!!!!!!!! те саме
 
         fetch(backendEndpoint, {
             method: 'POST',
