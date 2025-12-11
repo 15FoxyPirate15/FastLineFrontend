@@ -45,17 +45,18 @@
                 <h2 class="form-title">Create Account</h2>
                 <p class="form-description">Get started with FastLine today</p>
             </div>
-            <div class="form-entrname">
+            <form id="createAccountForm">
+                <div class="form-entrname">
                 <h3 class="form-entrname-title">Full Name</h3>
                 <input type="text" placeholder="Enter your full name" class="form-input registration-field" name="full_name">
             </div>
             <div class="form-email">
                 <h3 class="form-email-title">Email Address</h3>
-                <input type="text" placeholder="Enter your email address" class="form-input-email registration-field-email" name="full_name">
+                <input type="email" placeholder="Enter your email address" class="form-input-email registration-field-email" name="email">
             </div>
             <div class="form-password">
                 <h3 class="form-password-title">Password</h3>
-                <input type="text" placeholder="Create a strong password" class="form-input-password registration-field-password" name="full_name">
+                <input type="password" placeholder="Create a strong password" class="form-input-password registration-field-password" name="password">
             </div>
             <div class="form-agreement">
                 <input type="checkbox" name="terms_agreement" class="agreement-checkbox">
@@ -63,12 +64,12 @@
                 <h4 class="agreement-text">I agree to the <a href="#" class="agreement-link">Terms of Service</a> and <a href="#" class="agreement-link"> Privacy Policy</a></h4>
             </div>
             <div class="form-button">
-                <button class="button">Create Account</button>
+                <button type="submit" class="button">Create Account</button>
             </div>
             <div class="form-signin">
                 <h4 class="signin-text">Already have an account? <a href="#" class="signin-link"> Sign in</a></h4>
             </div>
-        </div>
+            </form>
     </div>
 </body>
 </html>
