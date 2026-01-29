@@ -1,35 +1,38 @@
 import React from 'react';
-import { MoreHorizontal, ListTodo, Calendar, PhoneCall, Video } from 'lucide-react'; 
+import { ListTodo, Calendar, PhoneCall, Video } from 'lucide-react'; 
 
 const WelcomeScreen = ({ onNavigate }) => {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden h-full w-full text-white"> 
+    // 👇 ДОДАНО: bg-gradient-to-br from-[#3b0764] via-[#1e1b4b] to-[#0f172a]
+    // Це перекриє будь-який фон з App.jsx і дасть потрібну насиченість
+    <div className="flex-1 flex flex-col items-center justify-center h-full w-full text-white relative z-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#2d266f] to-[#0f0c29]"> 
       
-      {/* Background Glow Effects */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
-
-      {/* Center Content */}
-      <div className="relative z-10 text-center max-w-2xl">
+      <div className="flex flex-col items-center max-w-5xl w-full px-4">
         
-        {/* Big Icon */}
-        <div className="mx-auto w-24 h-24 bg-[#2e1065] rounded-3xl flex items-center justify-center mb-8 shadow-lg shadow-purple-900/50 border border-white/10">
-            <MoreHorizontal size={48} className="text-purple-400" />
+        {/* --- ЦЕНТРАЛЬНА ІКОНКА --- */}
+        <div className="w-32 h-32 bg-[#1e1b4b] border-[3px] border-[#b048dd] rounded-[1rem] flex items-center justify-center mb-10 shadow-[0_0_60px_-10px_rgba(176,72,221,0.4)]">
+            
+            <div className="flex gap-3"> 
+                <div className="w-4 h-4 rounded-full bg-[#b048dd]"></div>
+                <div className="w-4 h-4 rounded-full bg-[#b048dd]"></div>
+                <div className="w-4 h-4 rounded-full bg-[#b048dd]"></div>
+            </div>
+
         </div>
 
-        <h1 className="text-4xl md:text-5xl font-bold mb-4">
-          Welcome to <span className="text-purple-400">FastLine</span>
+        <h1 className="text-5xl font-medium mb-4 tracking-tight text-center">
+          Welcome to <span className="text-[#a78bfa]">FastLine</span>
         </h1>
-        <p className="text-gray-400 text-lg mb-12 px-8">
+        
+        <p className="text-[#94a3b8] text-lg mb-20 text-center max-w-xl font-light leading-relaxed">
           Your secure workspace for team collaboration, project management, and professional communication.
         </p>
 
-        {/* Cards Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-4">
-            <FeatureCard icon={<ListTodo />} title="Tasks" subtitle="Manage tasks" onClick={() => onNavigate('tasks')} />
-            <FeatureCard icon={<Calendar />} title="Calendar" subtitle="View schedule" onClick={() => onNavigate('calendar')} />
-            <FeatureCard icon={<PhoneCall />} title="Scheduled Calls" subtitle="Upcoming calls" onClick={() => onNavigate('calls')} />
-            <FeatureCard icon={<Video />} title="Saved Meetings" subtitle="Meeting history" onClick={() => onNavigate('meetings')} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl px-4">
+            <FeatureCard icon={<ListTodo size={24} />} title="Tasks" subtitle="Manage tasks" onClick={() => onNavigate('tasks')} />
+            <FeatureCard icon={<Calendar size={24} />} title="Calendar" subtitle="View schedule" onClick={() => onNavigate('calendar')} />
+            <FeatureCard icon={<PhoneCall size={24} />} title="Scheduled Calls" subtitle="Upcoming calls" onClick={() => onNavigate('calls')} />
+            <FeatureCard icon={<Video size={24} />} title="Saved Meetings" subtitle="Meeting history" onClick={() => onNavigate('meetings')} />
         </div>
       </div>
     </div>
@@ -38,14 +41,16 @@ const WelcomeScreen = ({ onNavigate }) => {
 
 const FeatureCard = ({ icon, title, subtitle, onClick }) => (
     <div 
-        className="bg-[#1e293b]/50 backdrop-blur-md border border-white/5 p-6 rounded-2xl hover:bg-[#1e293b]/80 cursor-pointer transition flex flex-col items-center gap-3 group"
+        className="bg-[#0f172a]/40 backdrop-blur-sm border border-white/5 rounded-3xl p-6 flex flex-col items-center text-center gap-4 cursor-pointer group hover:bg-[#1e293b]/60 transition-all duration-300"
         onClick={onClick}
     >
-        <div className="p-3 bg-[#2e1065]/50 rounded-xl group-hover:scale-110 transition text-purple-300">
+        <div className="w-12 h-12 bg-[#2f235f] rounded-xl flex items-center justify-center text-[#a78bfa] group-hover:scale-110 transition-transform duration-300">
             {icon}
         </div>
-        <div className="font-semibold text-sm">{title}</div>
-        <div className="text-xs text-gray-500">{subtitle}</div>
+        <div className="flex flex-col gap-1">
+            <span className="text-white font-medium text-lg tracking-wide">{title}</span>
+            <span className="text-gray-500 text-sm font-medium">{subtitle}</span>
+        </div>
     </div>
 );
 

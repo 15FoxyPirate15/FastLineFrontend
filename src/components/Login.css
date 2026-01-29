@@ -1,0 +1,155 @@
+/* src/components/Login.css */
+
+/* Додали обгортку, яка діє ТІЛЬКИ на сторінці логіну */
+.login-page {
+  background-image: linear-gradient(-45deg,#181e41 10%,#383286 30%, #181e41 100%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
+  min-height: 100vh;
+  width: 100%;
+  /* Важливо: додаємо внутрішній відступ, щоб не липло до країв екрану */
+  box-sizing: border-box;
+  padding: 30px; 
+  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* Запобігає появі прокрутки */
+  overflow-x: hidden; 
+}
+
+.main-block {
+  display: flex;
+  width: 100%;
+  /* Трохи зменшили максимальну ширину для компактності */
+  max-width: 1200px; 
+  /* Змінили space-between на center, щоб зсунути блоки до центру */
+  justify-content: center; 
+  align-items: center;
+  /* Збільшили відступ між лівим і правим блоком */
+  gap: 100px; 
+}
+
+.definition {
+  flex: 1; /* Займає вільне місце */
+  max-width: 500px;
+  color: white; 
+}
+
+/* Стилі заголовків */
+.fastline-header, .encryption-header, .realtime-header, .management-header {
+  display: flex;
+  align-items: center;
+}
+
+/* Іконки */
+.fastline-icon { width: 50px; height: 50px; background-color: #5D43C3; border-radius: 10px; flex-shrink: 0; }
+.encryption-icon { width: 30px; height: 30px; background-color: #6C2A88; border-radius: 10px; flex-shrink: 0; }
+.realtime-icon { width: 30px; height: 30px; background-color: #4795EE; border-radius: 10px; flex-shrink: 0; }
+.management-icon { width: 30px; height: 30px; background-color: #5F58D3; border-radius: 10px; flex-shrink: 0; }
+
+/* Тексти */
+.fastline-title {
+  font-family: 'Segoe UI', sans-serif;
+  margin-left: 15px;
+  font-weight: 380;
+  font-size: 30px;
+  color: white;
+}
+
+.encryption-title, .realtime-title, .management-title {
+  margin-left: 15px;
+  font-weight: 380;
+  font-family: 'Segoe UI', sans-serif;
+  color: white;
+}
+
+.fastline-description, .encryption-description, .realtimen-description, .management-description {
+  opacity: 0.5;
+  color: whitesmoke;
+  margin-top: 10px; 
+  margin-bottom: 40px;
+  line-height: 1.5;
+  font-family: 'Segoe UI', sans-serif;
+  margin-left: 45px;
+}
+.fastline-description { margin-left: 0; } 
+
+/* ФОРМА */
+.registration-form {
+  box-shadow: 0px 0px 50px 0px rgba(0, 0, 0, 0.5);
+  border-radius: 20px;
+  background-image: linear-gradient(135deg, #181e41, #383286);
+  padding-bottom: 30px;
+  width: 450px;
+  flex-shrink: 0; 
+}
+
+.form-header { margin-top: 25px; margin-left: 25px; margin-right: 25px; }
+.form-title { font-family: 'Segoe UI', sans-serif; color: white; font-weight: 450; }
+/* ВИПРАВЛЕНО: змінив margin-top з -10px на 10px */
+.form-description { 
+    color: whitesmoke; 
+    margin-top: 10px; /* Додали відступ зверху */
+    line-height: 1.5; 
+    opacity: 0.5; 
+    font-family: 'Segoe UI', sans-serif; 
+}
+
+.form-entrname, .form-email, .form-password, .form-button { margin-left: 25px; margin-right: 25px; }
+
+.form-entrname-title, .form-email-title, .form-password-title {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-family: "Syne", sans-serif;
+  opacity: 0.67;
+  font-size: 14px;
+  color: whitesmoke;
+  font-weight: 450;
+}
+
+/* Інпути */
+.form-input, .form-input-email, .form-input-password {
+  width: 100%; 
+  box-sizing: border-box; 
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #151B40;
+  border: 1px solid #151B40;
+  color: #d3d6e2;
+  margin-bottom: 10px;
+}
+
+.form-agreement { margin-left: 25px; display: flex; align-items: flex-start; margin-top: 15px; }
+.agreement-checkbox { margin-top: 4px; }
+.agreement-text { margin: 0 0 0 10px; font-family: 'Segoe UI', sans-serif; color: whitesmoke; font-size: 13px; opacity: 0.7; }
+
+.button {
+  width: 100%; 
+  height: 50px;
+  border-radius: 8px;
+  font-size: 17px;
+  color: white;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #6C2A88;
+  border: none;
+  cursor: pointer;
+  margin-top: 20px;
+}
+.button:hover { background-color: #62166C; }
+
+.form-signin { margin-top: 30px; display: flex; justify-content: center; }
+.signin-text { color: whitesmoke; font-family: 'Segoe UI', sans-serif; opacity: 0.7; font-size: 13px; }
+.signin-link { text-decoration: none; color: #AB4CFF; margin-left: 5px;}
+
+/* ПРОСТИЙ АДАПТИВ ДЛЯ НОУТБУКІВ */
+@media (max-width: 1100px) {
+    .main-block {
+        gap: 50px; /* Зменшуємо відступ на менших екранах */
+    }
+    .registration-form {
+        width: 400px; /* Трохи зменшуємо форму */
+    }
+}

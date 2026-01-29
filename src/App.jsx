@@ -4,27 +4,34 @@ import WelcomeScreen from './components/WelcomeScreen';
 import ChatArea from './components/ChatArea';
 import ProfileSettings from './components/ProfileSettings';
 
+// Імпорт нових сторінок
 import TasksPage from './components/TasksPage';
 import CalendarPage from './components/CalendarPage';
 import CallsPage from './components/CallsPage';
 import MeetingsPage from './components/MeetingsPage';
 
+// Імпорт сторінки авторизації та її стилів
+import Login from './components/Login';
+import './components/Login.css'; 
+
 function App() {
+  // 1. Стан авторизації (false = спочатку треба увійти)
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   const [activeView, setActiveView] = useState('welcome');
   
   const [user, setUser] = useState({
-    name: "Alex Johnson",
-    handle: "@alexjohnson",
-    job: "Product Designer"
+    name: "EXNOEW",
+    handle: "@exnoew",
+    job: "Team Lead"
   });
 
   const [theme, setTheme] = useState('default');
 
   const getBackground = () => {
-    if (theme === 'ocean') return "bg-gradient-to-br from-[#0f172a] via-[#0e7490] to-[#164e63]";
-    if (theme === 'sunset') return "bg-gradient-to-br from-[#2e1065] via-[#be185d] to-[#881337]";
-    return "bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#172554]"; 
-  };
+    if (theme === 'ocean') return "...";
+    return "bg-gradient-to-br from-[#1e1b4b] via-[#172554] to-[#1e1b4b]"; 
+};
 
   const renderContent = () => {
     switch(activeView) {
@@ -48,17 +55,19 @@ function App() {
       default:
         return (
           <div className="relative h-full flex flex-col">
-             <div className="absolute top-5 right-5 flex gap-2 z-50">
-                <div onClick={() => setTheme('default')} className="w-6 h-6 rounded-full bg-blue-900 cursor-pointer border border-white/50 hover:scale-110 transition"></div>
-                <div onClick={() => setTheme('ocean')} className="w-6 h-6 rounded-full bg-cyan-700 cursor-pointer border border-white/50 hover:scale-110 transition"></div>
-                <div onClick={() => setTheme('sunset')} className="w-6 h-6 rounded-full bg-pink-700 cursor-pointer border border-white/50 hover:scale-110 transition"></div>
-             </div>
              <WelcomeScreen onNavigate={setActiveView} /> 
           </div>
         );
     }
   };
 
+  // 2. Логіка вибору екрану
+  // Якщо НЕ авторизований — показуємо Login
+  if (!isAuthenticated) {
+    return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
+  }
+
+  // Якщо авторизований — показуємо основний додаток
   return (
     <div className="flex h-screen w-full overflow-hidden bg-black">
       <Sidebar onNavigate={setActiveView} currentUser={user} />
