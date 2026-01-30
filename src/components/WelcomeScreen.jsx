@@ -3,13 +3,10 @@ import { ListTodo, Calendar, PhoneCall, Video } from 'lucide-react';
 
 const WelcomeScreen = ({ onNavigate }) => {
   return (
-    // 👇 ДОДАНО: bg-gradient-to-br from-[#3b0764] via-[#1e1b4b] to-[#0f172a]
-    // Це перекриє будь-який фон з App.jsx і дасть потрібну насиченість
     <div className="flex-1 flex flex-col items-center justify-center h-full w-full text-white relative z-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#2d266f] to-[#0f0c29]"> 
       
       <div className="flex flex-col items-center max-w-5xl w-full px-4">
         
-        {/* --- ЦЕНТРАЛЬНА ІКОНКА --- */}
         <div className="w-32 h-32 bg-[#1e1b4b] border-[3px] border-[#b048dd] rounded-[1rem] flex items-center justify-center mb-10 shadow-[0_0_60px_-10px_rgba(176,72,221,0.4)]">
             
             <div className="flex gap-3"> 

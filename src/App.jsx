@@ -4,18 +4,15 @@ import WelcomeScreen from './components/WelcomeScreen';
 import ChatArea from './components/ChatArea';
 import ProfileSettings from './components/ProfileSettings';
 
-// Імпорт нових сторінок
 import TasksPage from './components/TasksPage';
 import CalendarPage from './components/CalendarPage';
 import CallsPage from './components/CallsPage';
 import MeetingsPage from './components/MeetingsPage';
 
-// Імпорт сторінки авторизації та її стилів
 import Login from './components/Login';
 import './components/Login.css'; 
 
 function App() {
-  // 1. Стан авторизації (false = спочатку треба увійти)
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [activeView, setActiveView] = useState('welcome');
@@ -61,13 +58,10 @@ function App() {
     }
   };
 
-  // 2. Логіка вибору екрану
-  // Якщо НЕ авторизований — показуємо Login
   if (!isAuthenticated) {
     return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
   }
 
-  // Якщо авторизований — показуємо основний додаток
   return (
     <div className="flex h-screen w-full overflow-hidden bg-black">
       <Sidebar onNavigate={setActiveView} currentUser={user} />

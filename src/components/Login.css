@@ -1,6 +1,3 @@
-/* src/components/Login.css */
-
-/* Додали обгортку, яка діє ТІЛЬКИ на сторінці логіну */
 .login-page {
   background-image: linear-gradient(-45deg,#181e41 10%,#383286 30%, #181e41 100%);
   background-repeat: no-repeat;
@@ -8,48 +5,42 @@
   background-size: cover;
   min-height: 100vh;
   width: 100%;
-  /* Важливо: додаємо внутрішній відступ, щоб не липло до країв екрану */
+
   box-sizing: border-box;
   padding: 30px; 
   
   display: flex;
   justify-content: center;
   align-items: center;
-  /* Запобігає появі прокрутки */
+
   overflow-x: hidden; 
 }
 
 .main-block {
   display: flex;
   width: 100%;
-  /* Трохи зменшили максимальну ширину для компактності */
   max-width: 1200px; 
-  /* Змінили space-between на center, щоб зсунути блоки до центру */
   justify-content: center; 
   align-items: center;
-  /* Збільшили відступ між лівим і правим блоком */
   gap: 100px; 
 }
 
 .definition {
-  flex: 1; /* Займає вільне місце */
+  flex: 1;
   max-width: 500px;
   color: white; 
 }
 
-/* Стилі заголовків */
 .fastline-header, .encryption-header, .realtime-header, .management-header {
   display: flex;
   align-items: center;
 }
 
-/* Іконки */
 .fastline-icon { width: 50px; height: 50px; background-color: #5D43C3; border-radius: 10px; flex-shrink: 0; }
 .encryption-icon { width: 30px; height: 30px; background-color: #6C2A88; border-radius: 10px; flex-shrink: 0; }
 .realtime-icon { width: 30px; height: 30px; background-color: #4795EE; border-radius: 10px; flex-shrink: 0; }
 .management-icon { width: 30px; height: 30px; background-color: #5F58D3; border-radius: 10px; flex-shrink: 0; }
 
-/* Тексти */
 .fastline-title {
   font-family: 'Segoe UI', sans-serif;
   margin-left: 15px;
@@ -76,7 +67,6 @@
 }
 .fastline-description { margin-left: 0; } 
 
-/* ФОРМА */
 .registration-form {
   box-shadow: 0px 0px 50px 0px rgba(0, 0, 0, 0.5);
   border-radius: 20px;
@@ -88,10 +78,9 @@
 
 .form-header { margin-top: 25px; margin-left: 25px; margin-right: 25px; }
 .form-title { font-family: 'Segoe UI', sans-serif; color: white; font-weight: 450; }
-/* ВИПРАВЛЕНО: змінив margin-top з -10px на 10px */
 .form-description { 
     color: whitesmoke; 
-    margin-top: 10px; /* Додали відступ зверху */
+    margin-top: 10px;
     line-height: 1.5; 
     opacity: 0.5; 
     font-family: 'Segoe UI', sans-serif; 
@@ -109,7 +98,6 @@
   font-weight: 450;
 }
 
-/* Інпути */
 .form-input, .form-input-email, .form-input-password {
   width: 100%; 
   box-sizing: border-box; 
@@ -144,12 +132,94 @@
 .signin-text { color: whitesmoke; font-family: 'Segoe UI', sans-serif; opacity: 0.7; font-size: 13px; }
 .signin-link { text-decoration: none; color: #AB4CFF; margin-left: 5px;}
 
-/* ПРОСТИЙ АДАПТИВ ДЛЯ НОУТБУКІВ */
 @media (max-width: 1100px) {
     .main-block {
-        gap: 50px; /* Зменшуємо відступ на менших екранах */
+        gap: 50px;
     }
     .registration-form {
-        width: 400px; /* Трохи зменшуємо форму */
+        width: 400px;
     }
+}
+
+.definition {
+  flex: 1;
+  max-width: 500px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+  gap: 40px;
+}
+
+.header-section {
+  margin-bottom: 20px;
+}
+
+.logo-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.fastline-icon-lg {
+  width: 60px;
+  height: 60px;
+  background-color: #6C2A88;
+  border-radius: 16px;
+  flex-shrink: 0;
+}
+
+.app-title {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 36px;
+  font-weight: 400;
+  color: white;
+  margin: 0;
+}
+
+.app-description {
+  opacity: 0.6;
+  color: #d3d6e2;
+  font-size: 16px;
+  line-height: 1.5;
+  font-family: 'Segoe UI', sans-serif;
+  margin: 0;
+  max-width: 400px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px; 
+}
+
+.feature-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.icon-purple { background-color: #6C2A88; }
+.icon-blue   { background-color: #4795EE; }
+.icon-indigo { background-color: #5F58D3; }
+
+.feature-text h3 {
+  margin: 0 0 5px 0;
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 500;
+  font-size: 18px;
+  color: white;
+}
+
+.feature-text p {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 14px;
+  color: #a0a3b1;
+  line-height: 1.4;
 }

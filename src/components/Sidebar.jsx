@@ -18,14 +18,12 @@ const Sidebar = ({ onNavigate, currentUser }) => {
   return (
     <div className="w-80 bg-gradient-to-b from-[#181732] via-[#0f111a] to-[#1a193a] text-gray-400 flex flex-col h-screen border-r border-white/5 font-sans">
       
-      {/* HEADER */}
       <div className="px-6 pt-6 pb-4 cursor-pointer" onClick={() => onNavigate('welcome')}>
         <h1 className="text-white text-2xl font-semibold tracking-tight">
           Fast<span className="text-[#8b5cf6]">Line</span>
         </h1>
       </div>
 
-      {/* SEARCH BAR */}
       <div className="px-6 pb-4">
         <div className="bg-[#1c244b]/80 flex items-center px-3 py-2.5 rounded-xl border border-white/5 focus-within:border-purple-500/50 transition-colors shadow-inner">
           <Search size={18} className="text-[#a19bfe] mr-3" />
@@ -37,13 +35,10 @@ const Sidebar = ({ onNavigate, currentUser }) => {
         </div>
       </div>
 
-      {/* ЛІНІЯ РОЗДІЛЮВАЧ (Верхня) */}
       <div className="h-[1px] bg-white/5 w-full mb-4 shadow-[0_1px_0_0_rgba(0,0,0,0.3)]"></div>
 
-      {/* SCROLLABLE AREA */}
       <div className="flex-1 overflow-y-auto px-6 space-y-8 custom-scrollbar">
         
-        {/* PROJECTS */}
         <div>
           <div className="flex items-center gap-2 text-[11px] font-bold text-[#a19bfe] uppercase tracking-widest mb-4 opacity-80">
             <FolderKanban size={12} /> 
@@ -68,7 +63,6 @@ const Sidebar = ({ onNavigate, currentUser }) => {
           </div>
         </div>
 
-        {/* MESSAGES */}
         <div>
           <div className="flex items-center gap-2 text-[11px] text-[#cac7f4] font-bold uppercase tracking-widest mb-4 opacity-80">
             <MessageSquare size={12} /> 
@@ -95,16 +89,11 @@ const Sidebar = ({ onNavigate, currentUser }) => {
 
       </div>
 
-      {/* FOOTER PROFILE */}
-      {/* 1. Прибрали px-4 з батьківського контейнера, щоб лінія була на всю ширину */}
       <div className="mt-auto pt-4">
          
-         {/* ЛІНІЯ (На всю ширину) */}
          <div className="h-[1px] bg-white/5 w-full mb-4 shadow-[0_-1px_0_0_rgba(0,0,0,0.2)]"></div>
          
-         {/* Обгортка для картки (щоб вона мала відступи) */}
          <div className="px-4 pb-4">
-            {/* 2. Змінили фон на темніший: bg-[#0b0c15] */}
             <div className="bg-[#1d1a4a] border border-white/5 rounded-2xl p-3 flex items-center gap-3 shadow-lg group hover:border-purple-500/20 transition-all">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white font-bold border-[2px] border-white shadow-sm">
                     {currentUser.name[0]}

@@ -31,7 +31,6 @@ const ChatArea = ({ chatName, isAi, currentUser }) => {
 
   return (
     <div className="flex flex-col h-full text-white">
-      {/* Header */}
       <div className="p-4 border-b border-white/10 bg-white/5 backdrop-blur-md flex items-center gap-3">
         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isAi ? 'bg-purple-600' : 'bg-blue-600'}`}>
            {isAi ? <Bot size={20}/> : <User size={20}/>}
@@ -42,7 +41,6 @@ const ChatArea = ({ chatName, isAi, currentUser }) => {
         </div>
       </div>
 
-      {/* Messages List */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'} animate-message`}>
@@ -58,7 +56,6 @@ const ChatArea = ({ chatName, isAi, currentUser }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
       <div className="p-4 bg-white/5 backdrop-blur-md">
         <div className="flex items-center gap-2 bg-black/30 rounded-xl p-2 border border-white/10">
           <input 

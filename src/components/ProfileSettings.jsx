@@ -14,7 +14,6 @@ const ProfileSettings = ({ currentUser, updateProfile }) => {
         <h2 className="text-2xl font-bold mb-6 text-center">Edit Profile</h2>
         
         <div className="space-y-4">
-          {/* Name Input */}
           <div>
             <label className="text-xs text-gray-400 ml-1 mb-1 block">Display Name</label>
             <div className="flex items-center bg-black/30 rounded-xl p-3 border border-white/5">
@@ -23,7 +22,6 @@ const ProfileSettings = ({ currentUser, updateProfile }) => {
             </div>
           </div>
 
-          {/* Job Input */}
           <div>
             <label className="text-xs text-gray-400 ml-1 mb-1 block">Job Title</label>
             <div className="flex items-center bg-black/30 rounded-xl p-3 border border-white/5">
@@ -32,7 +30,6 @@ const ProfileSettings = ({ currentUser, updateProfile }) => {
             </div>
           </div>
 
-          {/* Handle Input */}
           <div>
              <label className="text-xs text-gray-400 ml-1 mb-1 block">Username (@)</label>
             <div className="flex items-center bg-black/30 rounded-xl p-3 border border-white/5">

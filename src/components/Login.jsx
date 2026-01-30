@@ -1,81 +1,71 @@
 import React, { useState } from 'react';
 import './Login.css'; 
 
+import { registerUserOnServer } from '../script.js'; 
+
 const Login = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-
+    e.preventDefault(); 
+    
     const userData = {
       full_name: fullName,
       email: email,
       password: password
     };
 
-    try {
-      const response = await fetch('http://localhost:3000/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
+    const result = await registerUserOnServer(userData);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        console.log('Registration successful:', data);
+    if (result.success) {
         onLoginSuccess();
-      } else {
-        alert(data.message || 'Registration failed');
-        console.error('Server error:', data);
-      }
-
-    } catch (error) {
-      console.error('Network error:', error);
-      alert('Failed. Check connection with server.');
+    } else {
+        alert(result.message);
     }
   };
 
   return (
       <div className="login-page">
-        
         <div className="main-block">
-          <div className="definition">
-            <div className="fastline-text">
-              <div className="fastline-header">
-                <div className="fastline-icon" />
-                <h1 className="fastline-title">FastLine</h1>
-              </div>
-              <p className="fastline-description">Your secure workspace for team collaboration, project management, and professional communication.</p>
-            </div>
-            
-            <div className="encryption">
-                <div className="encryption-header">
-                <div className="encryption-icon" />
-                <h3 className="encryption-title">End-to-end encryption</h3>
+          
+<div className="definition">
+  
+            <div className="header-section">
+                <div className="logo-row">
+                    <div className="fastline-icon-lg" />
+                    <h1 className="app-title">FastLine</h1>
                 </div>
-                <p className="encryption-description">Your messages are secure with military-grade encryption</p>
+                <p className="app-description">
+                  Your secure workspace for team collaboration, project management, and professional communication.
+                </p>
             </div>
-            
-            <div className="realtime">
-                <div className="realtime-header">
-                <div className="realtime-icon" />
-                <h3 className="realtime-title">Real-time collaboration</h3>
+
+            <div className="feature-item">
+                <div className="feature-icon icon-purple" />
+                <div className="feature-text">
+                    <h3>End-to-end encryption</h3>
+                    <p>Your messages are secure with military-grade encryption</p>
                 </div>
-                <p className="realtimen-description">Work together seamlessly with your team in real-time</p>
             </div>
-            
-            <div className="management">
-                <div className="management-header">
-                <div className="management-icon" />
-                <h3 className="management-title">Project management tools</h3>
+
+            <div className="feature-item">
+                <div className="feature-icon icon-blue" />
+                <div className="feature-text">
+                    <h3>Real-time collaboration</h3>
+                    <p>Work together seamlessly with your team in real-time</p>
                 </div>
-                <p className="management-description">Organize tasks, schedule meetings, and track progress</p>
             </div>
+
+            <div className="feature-item">
+                <div className="feature-icon icon-indigo" />
+                <div className="feature-text">
+                    <h3>Project management tools</h3>
+                    <p>Organize tasks, schedule meetings, and track progress</p>
+                </div>
+            </div>
+
           </div>
           
           <form className="registration-form" onSubmit={handleSubmit}>
@@ -90,21 +80,21 @@ const Login = ({ onLoginSuccess }) => {
                 type="text" 
                 placeholder="Enter your full name" 
                 className="form-input registration-field" 
-                name="full_name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+                required
               />
             </div>
             
             <div className="form-email">
               <h3 className="form-email-title">Email Address</h3>
               <input 
-                  type="text" 
+                  type="email" 
                   placeholder="Enter your email address" 
                   className="form-input-email registration-field-email" 
-                  name="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)} 
+                  onChange={(e) => setEmail(e.target.value)}
+                  required 
               />
             </div>
             
@@ -114,15 +104,15 @@ const Login = ({ onLoginSuccess }) => {
                   type="password" 
                   placeholder="Create a strong password" 
                   className="form-input-password registration-field-password" 
-                  name="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)} 
+                  onChange={(e) => setPassword(e.target.value)}
+                  required 
               />
             </div>
             
             <div className="form-agreement">
-              <input type="checkbox" name="terms_agreement" className="agreement-checkbox" />
-              <h4 className="agreement-text">I agree to the <a href="#" className="agreement-link">Terms of Service</a> and <a href="#" className="agreement-link"> Privacy Policy</a></h4>
+              <input type="checkbox" className="agreement-checkbox" required />
+              <h4 className="agreement-text">I agree to the <a href="#" className="agreement-link">Terms of Service</a>...</h4>
             </div>
             
             <div className="form-button">
