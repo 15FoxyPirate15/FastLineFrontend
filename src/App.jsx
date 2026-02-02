@@ -13,7 +13,7 @@ import Login from './components/Login';
 import './components/Login.css'; 
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
 
   const [activeView, setActiveView] = useState('welcome');
   
