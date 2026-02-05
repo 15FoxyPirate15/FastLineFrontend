@@ -16,7 +16,7 @@ const Sidebar = ({ onNavigate, currentUser }) => {
   ];
 
   return (
-    <div className="w-80 bg-gradient-to-b from-[#181732] via-[#0f111a] to-[#1a193a] text-gray-400 flex flex-col h-screen border-r border-white/5 font-sans">
+    <div className="w-80 bg-gradient-to-b from-[#25244d] to-[#1a193a] flex flex-col h-screen border-r border-white/5 font-sans">
       
       <div className="px-6 pt-6 pb-4 cursor-pointer" onClick={() => onNavigate('welcome')}>
         <h1 className="text-white text-2xl font-semibold tracking-tight">
@@ -25,7 +25,7 @@ const Sidebar = ({ onNavigate, currentUser }) => {
       </div>
 
       <div className="px-6 pb-4">
-        <div className="bg-[#1c244b]/80 flex items-center px-3 py-2.5 rounded-xl border border-white/5 focus-within:border-purple-500/50 transition-colors shadow-inner">
+        <div className="bg-[#131933] flex items-center px-3 py-2.5 rounded-xl border border-white/5 focus-within:border-purple-500/50 transition-colors shadow-inner">
           <Search size={18} className="text-[#a19bfe] mr-3" />
           <input 
             type="text" 
