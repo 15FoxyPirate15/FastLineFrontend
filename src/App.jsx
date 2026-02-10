@@ -14,7 +14,7 @@ import Login from './components/Login';
 import './components/Login.css'; 
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [activeView, setActiveView] = useState('welcome');
   

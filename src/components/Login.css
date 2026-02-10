@@ -1,95 +1,174 @@
-.login-page {
-  background-image: linear-gradient(-45deg,#181e41 10%,#383286 30%, #181e41 100%);
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  background-size: cover;
-  min-height: 100vh;
-  width: 100%;
+html, body {
+  margin: 0;
+  padding: 0;
+}
 
-  box-sizing: border-box;
-  padding: 30px; 
-  
+#root {
+  width: 100%;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
+}
 
-  overflow-x: hidden; 
+body {
+  background-image: linear-gradient(-45deg, #181e41 10%, #383286 30%, #181e41 100%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .main-block {
   display: flex;
-  width: 100%;
-  max-width: 1200px; 
-  justify-content: center; 
+  justify-content: space-between;
   align-items: center;
-  gap: 100px; 
+  width: 100%;
+  height: 100%;
 }
-
-.definition {
-  flex: 1;
-  max-width: 500px;
-  color: white; 
+.definition{
+  margin-left: 12.5%;
+  margin-top: -3%;
+  width: 40%;
 }
-
-.fastline-header, .encryption-header, .realtime-header, .management-header {
+.fastline-header{
   display: flex;
   align-items: center;
 }
-
-.fastline-icon { width: 50px; height: 50px; background-color: #5D43C3; border-radius: 10px; flex-shrink: 0; }
-.encryption-icon { width: 30px; height: 30px; background-color: #6C2A88; border-radius: 10px; flex-shrink: 0; }
-.realtime-icon { width: 30px; height: 30px; background-color: #4795EE; border-radius: 10px; flex-shrink: 0; }
-.management-icon { width: 30px; height: 30px; background-color: #5F58D3; border-radius: 10px; flex-shrink: 0; }
-
-.fastline-title {
-  font-family: 'Segoe UI', sans-serif;
+.fastline-icon{
+    width: 50px;
+    height: 50px;
+    background-color: #5D43C3;
+    border-radius: 10px;
+}
+.fastline-title{
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin-left: 15px;
   font-weight: 380;
   font-size: 30px;
   color: white;
 }
-
-.encryption-title, .realtime-title, .management-title {
-  margin-left: 15px;
-  font-weight: 380;
-  font-family: 'Segoe UI', sans-serif;
-  color: white;
-}
-
-.fastline-description, .encryption-description, .realtimen-description, .management-description {
+.fastline-description{
   opacity: 0.5;
   color: whitesmoke;
-  margin-top: 10px; 
-  margin-bottom: 40px;
+  margin-top: auto;
+  margin-bottom: 60px;
   line-height: 1.5;
-  font-family: 'Segoe UI', sans-serif;
-  margin-left: 45px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
-.fastline-description { margin-left: 0; } 
+.encryption-header{
+  display: flex;
+  align-items: center;
+}
+.encryption-icon{
+  width: 30px;
+  height: 30px;
+  background-color: #6C2A88;
+  border-radius: 10px;
+}
+.encryption-title{
+  margin-left: 15px;
+  font-weight: 380;
+  margin-top: -5px;
+  margin-bottom: 5px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: white;
+}
+.encryption-description{
+  margin-top: -10px;
+  margin-bottom: 50px;
+  margin-left: 45px;
+  line-height: 1.5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  opacity: 0.5;
+  color: whitesmoke;
+}
+.realtime-header{
+  display: flex;
+  align-items: center;
+}
+.realtime-icon{
+  width: 30px;
+  height: 30px;
+  background-color: #4795EE;
+  border-radius: 10px;
+}
+.realtime-title{
+  margin-left: 15px;
+  font-weight: 380;
+  margin-top: -5px;
+  margin-bottom: 5px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: white;
+}
+.realtime-description{
+  margin-top: -10px;
+  margin-bottom: 50px;
+  margin-left: 45px;
+  line-height: 1.5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  opacity: 0.5;
+  color: whitesmoke;
+}
+.management-header{
+  display: flex;
+  align-items: center;
+}
+.management-icon{
+  width: 30px;
+  height: 30px;
+  background-color:#5F58D3;
+  border-radius: 10px;
+}
+.management-title{
+  margin-left: 15px;
+  font-weight: 380;
+  margin-top: -5px;
+  margin-bottom: 5px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: white;
+}
+.management-description{
+  margin-top: -10px;
+  margin-left: 45px;
+  line-height: 1.5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  opacity: 0.5;
+  color: whitesmoke;
+}
+
 
 .registration-form {
   box-shadow: 0px 0px 50px 0px rgba(0, 0, 0, 0.5);
   border-radius: 20px;
   background-image: linear-gradient(135deg, #181e41, #383286);
-  padding-bottom: 30px;
-  width: 450px;
-  flex-shrink: 0; 
+  width: 50%;
+  margin-left:42%;
+  margin-right: 5%;
+}
+.form-header{
+  margin-top: 25px;
+  margin-left: 25px;
+}
+.form-title{
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: white;
+  font-weight: 450;
+}
+.form-description{
+  color: whitesmoke;
+  margin-top: -15px;
+  line-height: 1.5;
+  opacity: 0.5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.form-header { margin-top: 25px; margin-left: 25px; margin-right: 25px; }
-.form-title { font-family: 'Segoe UI', sans-serif; color: white; font-weight: 450; }
-.form-description { 
-    color: whitesmoke; 
-    margin-top: 10px;
-    line-height: 1.5; 
-    opacity: 0.5; 
-    font-family: 'Segoe UI', sans-serif; 
+.form-entrname{
+  margin-left: 25px;
 }
-
-.form-entrname, .form-email, .form-password, .form-button { margin-left: 25px; margin-right: 25px; }
-
-.form-entrname-title, .form-email-title, .form-password-title {
-  margin-top: 20px;
+.form-entrname-title{
+  margin-top: 40px;
   margin-bottom: 10px;
   font-family: "Syne", sans-serif;
   opacity: 0.67;
@@ -97,129 +176,319 @@
   color: whitesmoke;
   font-weight: 450;
 }
-
-.form-input, .form-input-email, .form-input-password {
-  width: 100%; 
-  box-sizing: border-box; 
-  padding: 10px 20px;
+.form-input {
+  width: 85%;
+  padding: 12px 20px;
+  margin-bottom: 15px;
   border-radius: 8px;
-  font-family: 'Segoe UI', sans-serif;
   background-color: #151B40;
-  border: 1px solid #151B40;
-  color: #d3d6e2;
-  margin-bottom: 10px;
-}
-
-.form-agreement { margin-left: 25px; display: flex; align-items: flex-start; margin-top: 15px; }
-.agreement-checkbox { margin-top: 4px; }
-.agreement-text { margin: 0 0 0 10px; font-family: 'Segoe UI', sans-serif; color: whitesmoke; font-size: 13px; opacity: 0.7; }
-
-.button {
-  width: 100%; 
-  height: 50px;
-  border-radius: 8px;
-  font-size: 17px;
-  color: white;
-  font-family: 'Segoe UI', sans-serif;
-  background-color: #6C2A88;
   border: none;
-  cursor: pointer;
-  margin-top: 20px;
-}
-.button:hover { background-color: #62166C; }
-
-.form-signin { margin-top: 30px; display: flex; justify-content: center; }
-.signin-text { color: whitesmoke; font-family: 'Segoe UI', sans-serif; opacity: 0.7; font-size: 13px; }
-.signin-link { text-decoration: none; color: #AB4CFF; margin-left: 5px;}
-
-@media (max-width: 1100px) {
-    .main-block {
-        gap: 50px;
-    }
-    .registration-form {
-        width: 400px;
-    }
-}
-
-.definition {
-  flex: 1;
-  max-width: 500px;
   color: white;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  text-align: left;
-  gap: 40px;
 }
-
-.header-section {
-  margin-bottom: 20px;
+.form-email{
+  margin-left: 25px;
+  margin-top: -20px;
 }
-
-.logo-row {
+.form-email-title{
+  margin-top: 40px;
+  margin-bottom: 10px;
+  font-family: "Syne", sans-serif;
+  opacity: 0.67;
+  font-size: 14px;
+  color: whitesmoke;
+  font-weight: 450;
+}
+.form-input-email{
+  width: 300px;
+  padding: 10px 50px;
+  border-radius: 8px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #151B40;
+  border: #151B40;
+  color:#d3d6e280;
+}
+.form-password{
+  margin-left: 25px;
+  margin-top: -20px;
+}
+.form-password-title{
+  margin-top: 40px;
+  margin-bottom: 10px;
+  font-family: "Syne", sans-serif;
+  opacity: 0.67;
+  font-size: 14px;
+  color: whitesmoke;
+  font-weight: 450;
+}
+.form-input-password{
+  width: 300px;
+  padding: 10px 50px;
+  border-radius: 8px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #151B40;
+  border: #151B40;
+  color:#d3d6e280;
+}
+.form-agreement{
   display: flex;
   align-items: center;
-  gap: 20px;
-  margin-bottom: 15px;
 }
-
-.fastline-icon-lg {
-  width: 60px;
-  height: 60px;
-  background-color: #6C2A88;
-  border-radius: 16px;
-  flex-shrink: 0;
+.agreement-checkbox{
+  border-radius: 5px;
+  width: 15px;
 }
-
-.app-title {
-  font-family: 'Segoe UI', sans-serif;
-  font-size: 36px;
+.agreement-text{
+  margin-bottom: 22px;
+  margin-left: 12px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: whitesmoke;
+  font-size: 15px;
   font-weight: 400;
+  opacity: 0.7;
+}
+.agreement-link{
+  text-decoration: none;
+  color: #AB4CFF;
+}
+.agreement-link:hover{
+  color: #62166C;
+}
+.form-button{
+  margin-top: 10px;
+  margin-left: 5%;
+}
+.button {
+  margin-left: 5%;
+  width: 90%;
+  height: 50px;
+  border-radius: 8px;
+  font-size: 100%;
+  background-color: #6C2A88;
   color: white;
-  margin: 0;
+  border: none;
+  cursor: pointer;
 }
-
-.app-description {
-  opacity: 0.6;
-  color: #d3d6e2;
-  font-size: 16px;
-  line-height: 1.5;
-  font-family: 'Segoe UI', sans-serif;
-  margin: 0;
-  max-width: 400px;
+.button:hover{
+  background-color: #62166C;
 }
-
-.feature-item {
+.form-signin{
+  margin-top: 15%;
+  margin-bottom: 10%;
   display: flex;
-  align-items: flex-start;
-  gap: 20px; 
+  justify-content: center;
+}
+.signin-text{
+  color: whitesmoke;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  opacity: 0.7;
+  font-size: 13px;
+  font-weight: 400;
+}
+.signin-link{
+  text-decoration: none;
+  color: #AB4CFF;
+}
+.signin-link:hover{
+  color: #62166C;
 }
 
-.feature-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  flex-shrink: 0;
-  margin-top: 5px;
+
+html, body {
+  margin: 0;
+  padding: 0;
 }
 
-.icon-purple { background-color: #6C2A88; }
-.icon-blue   { background-color: #4795EE; }
-.icon-indigo { background-color: #5F58D3; }
-
-.feature-text h3 {
-  margin: 0 0 5px 0;
-  font-family: 'Segoe UI', sans-serif;
-  font-weight: 500;
-  font-size: 18px;
+body {
+  margin: 0;
+  padding: 0;
+  background-image: linear-gradient(-45deg,#181e41 10%,#383286 30%, #181e41 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+.fastline-header{
+  display: flex;
+  align-items: center;
+}
+.fastline-icon{
+    width: 50px;
+    height: 50px;
+    background-color: #5D43C3;
+    border-radius: 10px;
+}
+.fastline-title{
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin-left: 15px;
+  font-weight: 380;
+  font-size: 30px;
   color: white;
 }
+.fastline-description{
+  opacity: 0.5;
+  color: whitesmoke;
+  margin-top: auto;
+  margin-bottom: 60px;
+  line-height: 1.5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
 
-.feature-text p {
-  margin: 0;
-  font-family: 'Segoe UI', sans-serif;
+
+.encryption-header{
+  display: flex;
+  align-items: center;
+}
+.encryption-icon{
+  width: 30px;
+  height: 30px;
+  background-color: #6C2A88;
+  border-radius: 10px;
+}
+.encryption-title{
+  margin-left: 15px;
+  font-weight: 380;
+  margin-top: -5px;
+  margin-bottom: 5px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: white;
+}
+.encryption-description{
+  margin-top: -10px;
+  margin-bottom: 50px;
+  margin-left: 45px;
+  line-height: 1.5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  opacity: 0.5;
+  color: whitesmoke;
+}
+.realtime-header{
+  display: flex;
+  align-items: center;
+}
+.realtime-icon{
+  width: 30px;
+  height: 30px;
+  background-color: #4795EE;
+  border-radius: 10px;
+}
+.realtime-title{
+  margin-left: 15px;
+  font-weight: 380;
+  margin-top: -5px;
+  margin-bottom: 5px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: white;
+}
+.realtime-description{
+  margin-top: -10px;
+  margin-bottom: 50px;
+  margin-left: 45px;
+  line-height: 1.5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  opacity: 0.5;
+  color: whitesmoke;
+}
+
+
+.management-header{
+  display: flex;
+  align-items: center;
+}
+.management-icon{
+  width: 30px;
+  height: 30px;
+  background-color:#5F58D3;
+  border-radius: 10px;
+}
+.management-title{
+  margin-left: 15px;
+  font-weight: 380;
+  margin-top: -5px;
+  margin-bottom: 5px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: white;
+}
+.management-description{
+  margin-top: -10px;
+  margin-left: 45px;
+  line-height: 1.5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  opacity: 0.5;
+  color: whitesmoke;
+}
+.form-header{
+  margin-top: 25px;
+  margin-left: 25px;
+}
+.form-title{
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: white;
+  font-weight: 450;
+}
+.form-description{
+  color: whitesmoke;
+  margin-top: -15px;
+  line-height: 1.5;
+  opacity: 0.5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.form-email{
+  margin-left: 25px;
+  margin-top: -5px;
+}
+.form-email-title{
+  margin-top: 40px;
+  margin-bottom: 10px;
+  font-family: "Syne", sans-serif;
+  opacity: 0.67;
   font-size: 14px;
-  color: #a0a3b1;
-  line-height: 1.4;
+  color: whitesmoke;
+  font-weight: 450;
+}
+.form-input-email{
+  width: 300px;
+  padding: 10px 50px;
+  border-radius: 8px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #151B40;
+  border: #151B40;
+  color:#d3d6e280;
+}
+.form-password{
+  margin-left: 25px;
+  margin-top: -20px;
+}
+.form-password-title{
+  margin-top: 40px;
+  margin-bottom: 10px;
+  font-family: "Syne", sans-serif;
+  opacity: 0.67;
+  font-size: 14px;
+  color: whitesmoke;
+  font-weight: 450;
+}
+.form-input-password{
+  width: 300px;
+  padding: 10px 50px;
+  border-radius: 8px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #151B40;
+  border: #151B40;
+  color:#d3d6e280;
+}
+.form-forgot{
+  margin-left: 69%;
+  margin-top: 3%;
+  margin-bottom: 5%;
+  display: flex;
+  align-items: center;
+  font-family: "Syne", sans-serif;
+  font-size: 14px;
+}
+.forgot-link{
+  text-decoration: none;
+  color: whitesmoke;
+}
+.fastline-icon {
+  background-image: url('/img/logo.png'); 
+  background-size: contain;
+  background-repeat: no-repeat;
 }
