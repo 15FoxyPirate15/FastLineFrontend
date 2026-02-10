@@ -1,7 +1,7 @@
 import React from 'react';
 import { Search, Settings, LogOut, FolderKanban, MessageSquare } from 'lucide-react';
 
-const Sidebar = ({ onNavigate, currentUser, onProfileClick }) => {
+const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
   
   const projects = [
     { name: "Maxim Project", subtitle: "Orest: Max, go pit piva...", time: "13:45", img: "M" },
@@ -109,7 +109,7 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick }) => {
 
                 <div className="flex flex-col gap-1 text-gray-500">
                     <Settings onClick={onProfileClick} size={16} className="hover:text-white transition" />
-                    <LogOut size={16} className="hover:text-red-400 transition" />
+                    <LogOut onClick={onLogout} size={16} className="hover:text-red-400 transition" />
                 </div>
             </div>
          </div>

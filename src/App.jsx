@@ -17,6 +17,16 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [activeView, setActiveView] = useState('welcome');
+
+  const handleLogout = () => {
+    // Якщо ти зберігав токен, очищуємо його (необов'язково, якщо не використовуєш)
+    localStorage.removeItem('token'); 
+    localStorage.removeItem('loggedIn');
+    
+    // Головне: перемикаємо стан на false -> це покаже екран Login
+    setIsAuthenticated(false);
+    setActiveView('welcome'); // Скидаємо вигляд на стандартний
+  };
   
   const [user, setUser] = useState({
     name: "EXNOEW",
@@ -78,6 +88,7 @@ function App() {
           onNavigate={setActiveView} 
           currentUser={user} 
           onProfileClick={() => setActiveView('edit_profile')}
+          onLogout={handleLogout}
       />
       
       <div className={`flex-1 ${getBackground()} transition-all duration-1000 ease-in-out relative`}>
