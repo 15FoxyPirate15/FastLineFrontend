@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import WelcomeScreen from './components/WelcomeScreen';
 import ChatArea from './components/ChatArea';
@@ -13,20 +13,14 @@ import MeetingsPage from './components/MeetingsPage';
 import Login from './components/Login';
 import './components/Login.css'; 
 
+// 👇 Імпортуємо функцію сокета
+import { createSocket } from './socket';
+
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
+  // Перевіряємо, чи є токен при завантаженні
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   const [activeView, setActiveView] = useState('welcome');
-
-  const handleLogout = () => {
-    // Якщо ти зберігав токен, очищуємо його (необов'язково, якщо не використовуєш)
-    localStorage.removeItem('token'); 
-    localStorage.removeItem('loggedIn');
-    
-    // Головне: перемикаємо стан на false -> це покаже екран Login
-    setIsAuthenticated(false);
-    setActiveView('welcome'); // Скидаємо вигляд на стандартний
-  };
+  const [socket, setSocket] = useState(null);
   
   const [user, setUser] = useState({
     name: "EXNOEW",
@@ -36,6 +30,31 @@ function App() {
 
   const [theme, setTheme] = useState('default');
 
+  // 👇 Ефект для підключення сокета, коли користувач авторизований
+  useEffect(() => {
+    if (isAuthenticated) {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const newSocket = createSocket(token);
+        setSocket(newSocket);
+
+        newSocket.on('connect', () => {
+          console.log('🟢 Socket connected:', newSocket.id);
+        });
+
+        // Очистка при виході
+        return () => newSocket.disconnect();
+      }
+    }
+  }, [isAuthenticated]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    if (socket) socket.disconnect();
+    setIsAuthenticated(false);
+    setActiveView('welcome');
+  };
+
   const getBackground = () => {
     if (theme === 'ocean') return "...";
     return "bg-gradient-to-br from-[#1e1b4b] via-[#172554] to-[#1e1b4b]"; 
@@ -44,9 +63,9 @@ function App() {
   const renderContent = () => {
     switch(activeView) {
       case 'ai_chat':
-        return <ChatArea key="ai" chatName="AI Assistant" isAi={true} currentUser={user} />;
+        return <ChatArea key="ai" chatName="AI Assistant" isAi={true} currentUser={user} socket={socket} />;
       case 'chat_maxim':
-        return <ChatArea key="maxim" chatName="Maxim" isAi={false} currentUser={user} />;
+        return <ChatArea key="maxim" chatName="Maxim" isAi={false} currentUser={user} socket={socket} />;
       case 'profile':
         return <ProfileSettings currentUser={user} updateProfile={(newData) => {
           setUser(newData);
@@ -78,10 +97,12 @@ function App() {
     }
   };
 
+  // 👇 Якщо не авторизований - показуємо Login
   if (!isAuthenticated) {
     return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
   }
 
+  // 👇 Якщо авторизований - показуємо App
   return (
     <div className="flex h-screen w-full overflow-hidden bg-black">
       <Sidebar 

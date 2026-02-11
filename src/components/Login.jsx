@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import './Login.css';
 
-// --- ЛІВА ЧАСТИНА (Опис) ---
 const DefinitionSide = () => (
   <div className="definition">
     <div className="fastline-text">
@@ -10,41 +9,24 @@ const DefinitionSide = () => (
         <h1 className="fastline-title">FastLine</h1>
       </div>
       <p className="fastline-description">
-        Your secure workspace for team collaboration, project management, and professional communication.
+        Your secure workspace for team collaboration.
       </p>
     </div>
-    <div className="encryption">
+     <div className="encryption">
       <div className="encryption-header">
         <div className="encryption-icon"></div>
         <h3 className="encryption-title">End-to-end encryption</h3>
       </div>
-      <p className="encryption-description">Your messages are secure with military-grade encryption</p>
-    </div>
-    <div className="realtime">
-      <div className="realtime-header">
-        <div className="realtime-icon"></div>
-        <h3 className="realtime-title">Real-time collaboration</h3>
-      </div>
-      <p className="realtime-description">Work together seamlessly with your team in real-time</p>
-    </div>
-    <div className="management">
-      <div className="management-header">
-        <div className="management-icon"></div>
-        <h3 className="management-title">Project management tools</h3>
-      </div>
-      <p className="management-description">Organize tasks, schedule meetings, and track progress</p>
+      <p className="encryption-description">Your messages are secure.</p>
     </div>
   </div>
 );
 
-// --- ГОЛОВНИЙ КОМПОНЕНТ LOGIN ---
-// Він приймає функцію onLoginSuccess, яку ми передали з App.jsx
 export default function Login({ onLoginSuccess }) {
-  const [isLoginMode, setIsLoginMode] = useState(false); // false = Реєстрація, true = Вхід
+  const [isLoginMode, setIsLoginMode] = useState(true);
   const [formData, setFormData] = useState({ full_name: '', email: '', password: '' });
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
-  // Очищення форми при перемиканні
   const toggleMode = () => {
     setIsLoginMode(!isLoginMode);
     setFormData({ full_name: '', email: '', password: '' });
@@ -54,7 +36,6 @@ export default function Login({ onLoginSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Валідація для реєстрації
     if (!isLoginMode && !acceptedTerms) {
       alert('❌ Потрібно погодитись з умовами');
       return;
@@ -70,18 +51,18 @@ export default function Login({ onLoginSuccess }) {
         body: JSON.stringify(formData),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        // Успіх!
         if (isLoginMode) {
-            // Якщо це був вхід -> запускаємо функцію успіху
-            onLoginSuccess(); 
+            localStorage.setItem('token', data.token);
+            if (onLoginSuccess) onLoginSuccess();
         } else {
-            // Якщо це була реєстрація -> перемикаємо на форму входу
             alert('✅ Акаунт створено! Увійдіть.');
             setIsLoginMode(true);
         }
       } else {
-        alert('❌ Помилка: Перевірте дані');
+        alert(`❌ Помилка: ${data.message || 'Перевірте дані'}`);
       }
     } catch (err) {
       console.error(err);
@@ -102,7 +83,6 @@ export default function Login({ onLoginSuccess }) {
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Поле імені показуємо тільки при реєстрації */}
           {!isLoginMode && (
             <div className="form-entrname">
               <h3 className="form-entrname-title">Full Name</h3>
@@ -147,7 +127,7 @@ export default function Login({ onLoginSuccess }) {
                   onChange={(e) => setAcceptedTerms(e.target.checked)}
                 />
                 <span className="agreement-text">
-                  I agree to the <a href="#" className="agreement-link">Terms</a> and <a href="#" className="agreement-link">Privacy Policy</a>
+                  I agree to the Terms and Privacy Policy
                 </span>
             </div>
           )}
