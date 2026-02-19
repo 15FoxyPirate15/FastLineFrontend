@@ -1,7 +1,7 @@
 import React from 'react';
 import './Loader.css';
 
-const Loader = () => {
+const Loader = ({ title, subtitle }) => {
   return (
     <div id="loader-overlay" className="loader-overlay">
       <div className="glass-card">
@@ -9,8 +9,8 @@ const Loader = () => {
           <div className="circle"></div>
           <div className="checkmark">L</div> 
         </div>
-        <h3>Creating your account...</h3>
-        <p>Please wait a moment while we set things up.</p>
+        <h3>{title}</h3>
+        <p>{subtitle}</p>
       </div>
     </div>
   );
