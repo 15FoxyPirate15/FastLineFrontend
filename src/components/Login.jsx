@@ -55,6 +55,10 @@ const Register = ({ onSwitchToLogin }) => {
       if (response.ok) {
         setTimeout(() => {
           setIsLoading(false);
+<<<<<<< HEAD
+=======
+          alert("✅ Акаунт створено! Тепер увійдіть.");
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
           onSwitchToLogin();
         }, 1500);
       } else {
@@ -113,7 +117,11 @@ const Register = ({ onSwitchToLogin }) => {
               onChange={(e) => setFormData({...formData, password: e.target.value})}
             />
             <div className="form-agreement">
+<<<<<<< HEAD
                 <input type="checkbox" name="terms_agreement" className="agreement-checkbox" required/>
+=======
+                <input type="checkbox" name="terms_agreement" className="agreement-checkbox"/>
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
                 <span className="custom-checkbox"></span>
                 <h4 className="agreement-text">I agree to the <a href="#" className="agreement-link">Terms of Service</a> and <a href="#" className="agreement-link"> Privacy Policy</a></h4>
             </div>
@@ -146,11 +154,15 @@ const SignIn = ({ onSwitchToRegister, onLoginSuccess }) => {
         body: JSON.stringify(loginData),
       });
 
+<<<<<<< HEAD
       // Зчитуємо відповідь сервера (навіть якщо це статус 400)
+=======
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
       const data = await response.json();
 
       if (response.ok) {
         localStorage.setItem('token', data.token);
+<<<<<<< HEAD
         if (data.user) {
           localStorage.setItem('user', JSON.stringify(data.user)); 
         }
@@ -166,11 +178,25 @@ const SignIn = ({ onSwitchToRegister, onLoginSuccess }) => {
         
         // Показуємо повідомлення від сервера (якщо воно є)
         alert(`Помилка авторизації: ${data.message || 'Перевірте введені дані'}`);
+=======
+
+        setTimeout(() => {
+          setIsLoading(false);
+          if (onLoginSuccess) onLoginSuccess(); 
+        }, 1500);
+      } else {
+        setIsLoading(false);
+        alert(`Помилка входу: ${data.message || 'Невірні дані'}`);
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
       }
     } catch (error) {
       setIsLoading(false);
       console.error("Сервер не відповідає:", error);
+<<<<<<< HEAD
       alert('Помилка зв\'язку з сервером');
+=======
+      alert('Сервер не відповідає');
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
     }
   };
 

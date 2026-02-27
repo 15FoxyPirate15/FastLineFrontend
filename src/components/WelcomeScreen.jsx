@@ -3,7 +3,11 @@ import { ListTodo, Calendar, PhoneCall, Video } from 'lucide-react';
 
 const WelcomeScreen = ({ onNavigate }) => {
   return (
+<<<<<<< HEAD
     <div className="flex-1 flex flex-col items-center justify-center h-full w-full text-white relative z-10 bg-gradient-to-tl from-[#181e41] from-[10%] via-[#383286] via-[30%] to-[#181e41]"> 
+=======
+    <div className="flex-1 flex flex-col items-center justify-center h-full w-full text-white relative z-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#2d266f] to-[#0f0c29]"> 
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
       
       <div className="flex flex-col items-center max-w-5xl w-full px-4">
         

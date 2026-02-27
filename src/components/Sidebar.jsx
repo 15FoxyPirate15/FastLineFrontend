@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState } from 'react';
 import { Search, Settings, LogOut, FolderKanban, MessageSquare } from 'lucide-react';
 
@@ -7,6 +8,12 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+=======
+import React from 'react';
+import { Search, Settings, LogOut, FolderKanban, MessageSquare } from 'lucide-react';
+
+const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
   
   const projects = [
     { name: "Maxim Project", subtitle: "Orest: Max, go pit piva...", time: "13:45", img: "M" },
@@ -20,6 +27,7 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
     { name: "Hot Pupsik", subtitle: "No messages yet", time: "", img: "H", color: "bg-orange-500" }
   ];
 
+<<<<<<< HEAD
   // --- ФУНКЦІЯ ПОШУКУ КОРИСТУВАЧІВ ---
   const handleSearch = async (e) => {
     const query = e.target.value;
@@ -54,6 +62,8 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
     }
   };
 
+=======
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
   return (
     <div className="w-80 bg-gradient-to-b from-[#25244d] to-[#1a193a] flex flex-col h-screen border-r border-white/5 font-sans">
       
@@ -63,12 +73,17 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
         </h1>
       </div>
 
+<<<<<<< HEAD
       {/* --- ОНОВЛЕНИЙ БЛОК ПОШУКУ З ВИПАДАЮЧИМ МЕНЮ --- */}
       <div className="px-6 pb-4 relative z-50">
+=======
+      <div className="px-6 pb-4">
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
         <div className="bg-[#131933] flex items-center px-3 py-2.5 rounded-xl border border-white/5 focus-within:border-purple-500/50 transition-colors shadow-inner">
           <Search size={18} className="text-[#a19bfe] mr-3" />
           <input 
             type="text" 
+<<<<<<< HEAD
             placeholder="Search users (e.g. @foxy)..." 
             value={searchQuery}
             onChange={handleSearch}
@@ -112,6 +127,12 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
             )}
           </div>
         )}
+=======
+            placeholder="Search Workspace" 
+            className="bg-transparent border-none outline-none text-sm text-gray-300 w-full placeholder-gray-600" 
+          />
+        </div>
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
       </div>
 
       <div className="h-[1px] bg-white/5 w-full mb-4 shadow-[0_1px_0_0_rgba(0,0,0,0.3)]"></div>
@@ -127,6 +148,7 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
           <div className="space-y-1">
             {projects.map((proj, idx) => (
               <div key={idx} className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 cursor-pointer transition">
+<<<<<<< HEAD
                 <div className="w-10 h-10 rounded-full bg-[#1e2336] border border-white/10 flex items-center justify-center text-white font-medium text-sm">
                   {proj.img}
                 </div>
@@ -139,6 +161,18 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
                     {proj.subtitle}
                   </div>
                 </div>
+=======
+                 <div className="w-10 h-10 rounded-full bg-[#1e2336] border border-white/10 flex items-center justify-center text-white font-medium text-sm">
+                    {proj.img}
+                 </div>
+                 <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline">
+                        <span className="text-gray-200 text-sm font-medium truncate">{proj.name}</span>
+                        <span className="text-[10px] text-gray-600">{proj.time}</span>
+                    </div>
+                    <div className="text-[11px] text-gray-500 truncate group-hover:text-gray-400 transition">{proj.subtitle}</div>
+                 </div>
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
               </div>
             ))}
           </div>
@@ -153,6 +187,7 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
           <div className="space-y-1">
             {messages.map((msg, idx) => (
               <div key={idx} onClick={() => onNavigate('chat_maxim')} className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 cursor-pointer transition">
+<<<<<<< HEAD
                 <div className={`w-10 h-10 rounded-full ${msg.color} flex items-center justify-center text-white text-xs font-bold border-2 border-transparent ring-2 ring-[#0f111a]`}>
                   {msg.img}
                 </div>
@@ -165,6 +200,18 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
                     {msg.subtitle}
                   </div>
                 </div>
+=======
+                 <div className={`w-10 h-10 rounded-full ${msg.color} flex items-center justify-center text-white text-xs font-bold border-2 border-transparent ring-2 ring-[#0f111a]`}>
+                    {msg.img}
+                 </div>
+                 <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline">
+                        <span className="text-gray-200 text-sm font-medium truncate">{msg.name}</span>
+                        <span className="text-[10px] text-gray-600">{msg.time}</span>
+                    </div>
+                    <div className="text-[11px] text-gray-500 truncate group-hover:text-gray-400 transition">{msg.subtitle}</div>
+                 </div>
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
               </div>
             ))}
           </div>
@@ -173,6 +220,7 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
       </div>
 
       <div className="mt-auto pt-4">
+<<<<<<< HEAD
         <div className="h-[1px] bg-white/5 w-full mb-4 shadow-[0_-1px_0_0_rgba(0,0,0,0.2)]"></div>
 
         <div className="px-4 pb-4">
@@ -228,6 +276,33 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
           )}
         </div>
       </div>
+=======
+         
+         <div className="h-[1px] bg-white/5 w-full mb-4 shadow-[0_-1px_0_0_rgba(0,0,0,0.2)]"></div>
+         
+         <div className="px-4 pb-4">
+            <div 
+                className="bg-[#1d1a4a] border border-white/5 rounded-2xl p-3 flex items-center gap-3 shadow-lg cursor-pointer hover:border-purple-500/20 transition-all group"
+            >
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white font-bold border-[2px] border-white shadow-sm">
+                    {currentUser.name[0]}
+                </div>
+                
+                <div className="flex-1 overflow-hidden">
+                    <div className="text-white text-sm font-semibold truncate">{currentUser.name}</div>
+                    <div className="text-[10px] text-[#8b5cf6] font-medium truncate">@{currentUser.handle.replace('@','')}</div>
+                    <div className="text-[10px] text-gray-500 truncate">{currentUser.job}</div>
+                </div>
+
+                <div className="flex flex-col gap-1 text-gray-500">
+                    <Settings onClick={onProfileClick} size={16} className="hover:text-white transition" />
+                    <LogOut onClick={onLogout} size={16} className="hover:text-red-400 transition" />
+                </div>
+            </div>
+         </div>
+      </div>
+
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
     </div>
   );
 };

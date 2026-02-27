@@ -13,13 +13,22 @@ import MeetingsPage from './components/MeetingsPage';
 import Login from './components/Login';
 import './components/Login.css'; 
 
+<<<<<<< HEAD
 import { createSocket } from './socket';
 
 function App() {
+=======
+// 👇 Імпортуємо функцію сокета
+import { createSocket } from './socket';
+
+function App() {
+  // Перевіряємо, чи є токен при завантаженні
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
   const [activeView, setActiveView] = useState('welcome');
   const [socket, setSocket] = useState(null);
   
+<<<<<<< HEAD
   const [user, setUser] = useState(null);
 
   const [theme, setTheme] = useState('default');
@@ -72,12 +81,41 @@ function App() {
     return () => {
       isMounted = false;
     };
+=======
+  const [user, setUser] = useState({
+    name: "EXNOEW",
+    handle: "@exnoew",
+    job: "Team Lead"
+  });
+
+  const [theme, setTheme] = useState('default');
+
+  // 👇 Ефект для підключення сокета, коли користувач авторизований
+  useEffect(() => {
+    if (isAuthenticated) {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const newSocket = createSocket(token);
+        setSocket(newSocket);
+
+        newSocket.on('connect', () => {
+          console.log('🟢 Socket connected:', newSocket.id);
+        });
+
+        // Очистка при виході
+        return () => newSocket.disconnect();
+      }
+    }
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
   }, [isAuthenticated]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     if (socket) socket.disconnect();
+<<<<<<< HEAD
     setUser(null);
+=======
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
     setIsAuthenticated(false);
     setActiveView('welcome');
   };
@@ -124,10 +162,19 @@ function App() {
     }
   };
 
+<<<<<<< HEAD
   if (!isAuthenticated || !user) {
     return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
   }
 
+=======
+  // 👇 Якщо не авторизований - показуємо Login
+  if (!isAuthenticated) {
+    return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
+  }
+
+  // 👇 Якщо авторизований - показуємо App
+>>>>>>> ddc076c18b3fb8b53cb257a7156626d61905f3ef
   return (
     <div className="flex h-screen w-full overflow-hidden bg-black">
       <Sidebar 
