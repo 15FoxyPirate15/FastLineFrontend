@@ -4,6 +4,8 @@ import WelcomeScreen from './components/WelcomeScreen';
 import ChatArea from './components/ChatArea';
 import ProfileSettings from './components/ProfileSettings';
 import EditProfile from './components/EditProfile';
+import GroupChatArea from './components/GroupChatArea';
+import QuickNav from './components/QuickNav';
 
 import TasksPage from './components/TasksPage';
 import CalendarPage from './components/CalendarPage';
@@ -102,6 +104,10 @@ function App() {
       case 'ai_chat':
         return <ChatArea key="ai" chatName="AI Assistant" isAi={true} currentUser={user} socket={socket} />;
       case 'chat_maxim':
+          return <ChatArea key="maxim" chatName="Maxim" isAi={false} currentUser={user} socket={socket} onBack={() => setActiveView('welcome')} />;
+      case 'group_chat':
+          return <GroupChatArea groupName="Frontend Team" currentUser={user} onBack={() => setActiveView('welcome')} />;
+      case 'chat_maxim':
         return <ChatArea key="maxim" chatName="Maxim" isAi={false} currentUser={user} socket={socket} />;
       case 'profile':
         return <ProfileSettings currentUser={user} updateProfile={(newData) => {
@@ -138,8 +144,22 @@ function App() {
     return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
   }
 
-  return (
+return (
     <div className="flex h-screen w-full overflow-hidden bg-black">
+      
+      {/* 1. ДОДАЄМО СТИЛЬ АНІМАЦІЇ ПРЯМО СЮДИ */}
+      <style>
+        {`
+          @keyframes pageFadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          .animate-page {
+            animation: pageFadeIn 0.35s ease-out forwards;
+          }
+        `}
+      </style>
+
       <Sidebar 
           onNavigate={setActiveView} 
           currentUser={user} 
@@ -147,8 +167,16 @@ function App() {
           onLogout={handleLogout}
       />
       
-      <div className={`flex-1 ${getBackground()} transition-all duration-1000 ease-in-out relative`}>
-        {renderContent()}
+      <div className={`flex-1 ${getBackground()} transition-all duration-1000 ease-in-out relative overflow-hidden`}>
+        
+        {/* QuickNav тепер тут */}
+        <QuickNav activeView={activeView} onNavigate={setActiveView} />
+
+        {/* 2. ЗАСТОСОВУЄМО КЛАС animate-page ТА key */}
+        <div key={activeView} className="h-full animate-page">
+          {renderContent()}
+        </div>
+
       </div>
     </div>
   );

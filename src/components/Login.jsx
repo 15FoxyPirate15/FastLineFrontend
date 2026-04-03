@@ -146,7 +146,6 @@ const SignIn = ({ onSwitchToRegister, onLoginSuccess }) => {
         body: JSON.stringify(loginData),
       });
 
-      // Зчитуємо відповідь сервера (навіть якщо це статус 400)
       const data = await response.json();
 
       if (response.ok) {
@@ -160,11 +159,9 @@ const SignIn = ({ onSwitchToRegister, onLoginSuccess }) => {
           if (onLoginSuccess) onLoginSuccess(data.user); 
         }, 1500);
       } else {
-        // ДОДАНО БЛОК ELSE: обробка помилок
         setIsLoading(false);
         console.error("Відповідь з помилкою від бекенду:", data);
         
-        // Показуємо повідомлення від сервера (якщо воно є)
         alert(`Помилка авторизації: ${data.message || 'Перевірте введені дані'}`);
       }
     } catch (error) {

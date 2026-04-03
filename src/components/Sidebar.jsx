@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Settings, LogOut, FolderKanban, MessageSquare } from 'lucide-react';
+import { Search, Settings, LogOut, FolderKanban, MessageSquare, Plus, Users } from 'lucide-react';
 
 const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,7 +43,8 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
         console.error("Помилка пошуку:", error);
         setSearchResults([]);
       } finally {
-        setIsSearching(false);
+        // Симулюємо трохи довше завантаження, щоб побачити скелетон
+        setTimeout(() => setIsSearching(false), 1000);
       }
     } else {
       setShowDropdown(false);
@@ -51,8 +52,20 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
     }
   };
 
+  // Компонент скелетону для одного рядка результату
+  const UserSkeleton = () => (
+    <div className="flex items-center gap-3 px-4 py-2 animate-pulse">
+      <div className="w-8 h-8 rounded-full bg-white/10 shrink-0"></div>
+      <div className="flex-1 space-y-2 min-w-0">
+        <div className="h-3 bg-white/10 rounded w-3/4"></div>
+        <div className="h-2 bg-purple-500/10 rounded w-1/2"></div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="w-80 bg-gradient-to-b from-[#25244d] to-[#1a193a] flex flex-col h-screen border-r border-white/5 font-sans">
+    // ГЛАССМОРФІЗМ 2.0: Додано border-t-white/10 для об'єму
+    <div className="w-80 bg-[#171635]/95 backdrop-blur-xl flex flex-col h-screen border-r border-white/5 border-t border-t-white/10 font-sans relative z-20">
       
       <div className="px-6 pt-6 pb-4 cursor-pointer" onClick={() => onNavigate('welcome')}>
         <h1 className="text-white text-2xl font-semibold tracking-tight">
@@ -61,7 +74,7 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
       </div>
 
       <div className="px-6 pb-4 relative z-50">
-        <div className="bg-[#131933] flex items-center px-3 py-2.5 rounded-xl border border-white/5 focus-within:border-purple-500/50 transition-colors shadow-inner">
+        <div className="bg-[#0c1021] flex items-center px-3 py-2.5 rounded-xl border border-white/5 focus-within:border-purple-500/50 transition-colors shadow-inner">
           <Search size={18} className="text-[#a19bfe] mr-3" />
           <input 
             type="text" 
@@ -73,15 +86,22 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
         </div>
 
         {showDropdown && (
-          <div className="absolute left-6 right-6 top-full mt-2 bg-[#1d1a4a] border border-white/10 rounded-xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto custom-scrollbar">
+          // ГЛАССМОРФІЗМ 2.0: border-t-white/20 для випадаючого меню
+          <div className="absolute left-6 right-6 top-full mt-2 bg-[#1d1a4a]/95 backdrop-blur-lg border border-white/10 border-t-white/20 rounded-xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto custom-scrollbar z-50">
             {isSearching ? (
-              <div className="p-4 text-center text-sm text-gray-400 animate-pulse">Шукаємо...</div>
+              // СКЕЛЕТНЕ ЗАВАНТАЖЕННЯ (Пункт 5)
+              <div className="py-2 space-y-1">
+                <UserSkeleton />
+                <UserSkeleton />
+                <UserSkeleton />
+              </div>
             ) : searchResults.length > 0 ? (
               <div className="py-2">
                 {searchResults.map((user, idx) => (
+                  // ЕФЕКТ НАТИСКАННЯ (Пункт 1): active:scale-98
                   <div 
                     key={idx} 
-                    className="flex items-center gap-3 px-4 py-2 hover:bg-white/5 cursor-pointer transition-colors" 
+                    className="flex items-center gap-3 px-4 py-2 hover:bg-white/5 active:scale-98 cursor-pointer transition-all" 
                     onClick={() => {
                       setShowDropdown(false);
                       setSearchQuery('');
@@ -108,25 +128,26 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
         )}
       </div>
 
-      <div className="h-[1px] bg-white/5 w-full mb-4 shadow-[0_1px_0_0_rgba(0,0,0,0.3)]"></div>
+      <div className="h-[1px] bg-white/5 w-full mb-4"></div>
 
-      <div className="flex-1 overflow-y-auto px-6 space-y-8 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto px-6 space-y-8 custom-scrollbar pr-2">
         
+        {/* PROJECTS */}
         <div>
           <div className="flex items-center gap-2 text-[11px] font-bold text-[#a19bfe] uppercase tracking-widest mb-4 opacity-80">
-            <FolderKanban size={12} /> 
-            <span>Projects</span>
+            <FolderKanban size={12} /> <span>Projects</span>
           </div>
           
           <div className="space-y-1">
             {projects.map((proj, idx) => (
-              <div key={idx} className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 cursor-pointer transition">
+              // ЕФЕКТ НАТИСКАННЯ: active:scale-95 transition-all
+              <div key={idx} className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 active:scale-95 cursor-pointer transition-all">
                 <div className="w-10 h-10 rounded-full bg-[#1e2336] border border-white/10 flex items-center justify-center text-white font-medium text-sm">
                   {proj.img}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline">
-                    <span className="text-gray-200 text-sm font-medium truncate">{proj.name}</span>
+                    <span className="text-gray-200 text-sm font-medium truncate group-hover:text-white transition-colors">{proj.name}</span>
                     <span className="text-[10px] text-gray-600">{proj.time}</span>
                   </div>
                   <div className="text-[11px] text-gray-500 truncate group-hover:text-gray-400 transition">
@@ -138,21 +159,53 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
           </div>
         </div>
 
+        {/* GROUPS */}
+        <div>
+          <div className="flex items-center justify-between text-[11px] text-[#cac7f4] font-bold uppercase tracking-widest mb-4 opacity-80">
+            <div className="flex items-center gap-2">
+              <Users size={12} /> <span>Groups</span>
+            </div>
+            {/* ЕФЕКТ НАТИСКАННЯ: active:scale-90 */}
+            <button 
+              onClick={() => onNavigate('group_chat')} 
+              className="p-1 hover:bg-white/10 active:scale-90 rounded-md transition-all text-[#a19bfe] hover:text-white"
+              title="Create new group"
+            >
+              <Plus size={14} />
+            </button>
+          </div>
+
+          <div className="space-y-1">
+             <div onClick={() => onNavigate('group_chat')} className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 active:scale-95 cursor-pointer transition-all">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-500 to-orange-400 flex items-center justify-center text-white text-xs font-bold border-2 border-transparent ring-2 ring-[#0f111a]">
+                  🚀
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-gray-200 text-sm font-medium truncate group-hover:text-white transition-colors">Frontend Team</span>
+                    <span className="text-[10px] text-gray-600">14:20</span>
+                  </div>
+                  <div className="text-[11px] text-[#a19bfe] truncate group-hover:text-purple-300 transition">Orest: Let's deploy!</div>
+                </div>
+              </div>
+          </div>
+        </div>
+
+        {/* DIRECT MESSAGES */}
         <div>
           <div className="flex items-center gap-2 text-[11px] text-[#cac7f4] font-bold uppercase tracking-widest mb-4 opacity-80">
-            <MessageSquare size={12} /> 
-            <span>Direct Messages</span>
+            <MessageSquare size={12} /> <span>Direct Messages</span>
           </div>
 
           <div className="space-y-1">
             {messages.map((msg, idx) => (
-              <div key={idx} onClick={() => onNavigate('chat_maxim')} className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 cursor-pointer transition">
+              <div key={idx} onClick={() => onNavigate('chat_maxim')} className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 active:scale-95 cursor-pointer transition-all">
                 <div className={`w-10 h-10 rounded-full ${msg.color} flex items-center justify-center text-white text-xs font-bold border-2 border-transparent ring-2 ring-[#0f111a]`}>
                   {msg.img}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline">
-                    <span className="text-gray-200 text-sm font-medium truncate">{msg.name}</span>
+                    <span className="text-gray-200 text-sm font-medium truncate group-hover:text-white transition-colors">{msg.name}</span>
                     <span className="text-[10px] text-gray-600">{msg.time}</span>
                   </div>
                   <div className="text-[11px] text-gray-500 truncate group-hover:text-gray-400 transition">
@@ -166,61 +219,39 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
 
       </div>
 
-      <div className="mt-auto pt-4">
-        <div className="h-[1px] bg-white/5 w-full mb-4 shadow-[0_-1px_0_0_rgba(0,0,0,0.2)]"></div>
-
-        <div className="px-4 pb-4">
+      {/* FOOTER: ПРОФІЛЬ */}
+      <div className="mt-auto pt-4 pb-4 px-4">
+        <div className="h-[1px] bg-white/5 w-full mb-4"></div>
           {currentUser && (
-            <div className="bg-[#1d1a4a] border border-white/5 rounded-2xl p-3 flex items-center gap-3 shadow-lg cursor-pointer hover:border-purple-500/20 transition-all group">
+            // ГЛАССМОРФІЗМ 2.0: border-t-white/10
+            <div className="bg-[#1d1a4a] border border-white/5 border-t-white/10 rounded-2xl p-3 flex items-center gap-3 shadow-lg cursor-pointer hover:border-purple-500/20 transition-all group">
               
               <div className="relative">
                 <div className="w-10 h-10 rounded-full overflow-hidden border-[2px] border-white shadow-sm">
                 {currentUser.avatar ? (
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser.name || "User"}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={currentUser.avatar} alt={currentUser.name || "User"} className="w-full h-full object-cover"/>
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white font-bold">
                     {currentUser.name?.[0]?.toUpperCase() || "?"}
                   </div>
                 )}
               </div>
-
-                <span
-                  className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#1d1a4a] ${
-                    currentUser.status === "online"
-                      ? "bg-green-500"
-                      : currentUser.status === "away"
-                      ? "bg-yellow-500"
-                      : "bg-gray-500"
-                  }`}
-                />
+                {/* МІКРОІНТЕРАКЦІЯ (Пункт 1): animate-pulse для онлайн-статусу */}
+                <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#1d1a4a] ${currentUser.status === "online" ? "bg-green-500 animate-pulse" : "bg-gray-500"}`}/>
               </div>
 
               <div className="flex-1 overflow-hidden">
-                <div className="text-white text-sm font-semibold truncate">
-                  {currentUser.name || "Unknown User"}
-                </div>
-                <div className="text-[10px] text-[#8b5cf6] font-medium truncate">
-                  {currentUser.handle || "@no_tag"}
-                </div>
-                {currentUser.job && (
-                  <div className="text-[10px] text-gray-500 truncate">
-                    {currentUser.job}
-                  </div>
-                )}
+                <div className="text-white text-sm font-semibold truncate group-hover:text-purple-300 transition-colors">{currentUser.name || "Unknown User"}</div>
+                <div className="text-[10px] text-[#8b5cf6] font-medium truncate">{currentUser.handle || "@no_tag"}</div>
               </div>
 
               <div className="flex flex-col gap-1 text-gray-500">
-                <Settings onClick={onProfileClick} size={16} className="hover:text-white transition" />
-                <LogOut onClick={onLogout} size={16} className="hover:text-red-400 transition" />
+                {/* МІКРОІНТЕРАКЦІЯ: active:scale-90 transition */}
+                <Settings onClick={onProfileClick} size={16} className="hover:text-white active:scale-90 transition" />
+                <LogOut onClick={onLogout} size={16} className="hover:text-red-400 active:scale-90 transition" />
               </div>
-
             </div>
           )}
-        </div>
       </div>
     </div>
   );
