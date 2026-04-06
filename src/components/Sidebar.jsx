@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Settings, LogOut, FolderKanban, MessageSquare, Plus, Users } from 'lucide-react';
 
-const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
+const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartChat, refreshTrigger }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [userChats, setUserChats] = useState([]);
   
   const projects = [
     { name: "Maxim Project", subtitle: "Orest: Max, go pit piva...", time: "13:45", img: "M" },
@@ -35,16 +36,14 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
 
         if (response.ok) {
           const data = await response.json();
-          setSearchResults(data); 
+          setSearchResults(Array.isArray(data) ? data : []); 
         } else {
           setSearchResults([]);
         }
       } catch (error) {
-        console.error("Помилка пошуку:", error);
         setSearchResults([]);
       } finally {
-        // Симулюємо трохи довше завантаження, щоб побачити скелетон
-        setTimeout(() => setIsSearching(false), 1000);
+        setTimeout(() => setIsSearching(false), 500);
       }
     } else {
       setShowDropdown(false);
@@ -52,7 +51,53 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
     }
   };
 
-  // Компонент скелетону для одного рядка результату
+  // ОНОВЛЕНИЙ useEffect: правильний парсинг учасників та часу Firebase
+  useEffect(() => {
+    if (!currentUser?.email) return;
+
+    const fetchMyChats = async () => {
+        try {
+            const res = await fetch(`https://backendfastline.onrender.com/chats/user/${currentUser.email}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            if (Array.isArray(data)) {
+                const mappedChats = data.map(chat => {
+                    // Знаходимо email співрозмовника
+                    let otherUserEmail = "Unknown User";
+                    if (chat.participants && Array.isArray(chat.participants)) {
+                        otherUserEmail = chat.participants.find(email => email !== currentUser.email) || chat.participants[0];
+                    }
+
+                    // Форматуємо час з урахуванням формату Firebase (_seconds)
+                    let timeString = "";
+                    const timeSource = chat.lastMessage?.sentAt || chat.createdAt;
+                    if (timeSource) {
+                        const dateObj = timeSource._seconds ? new Date(timeSource._seconds * 1000) : new Date(timeSource);
+                        timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    }
+
+                    return {
+                        id: chat.id,
+                        name: chat.name || otherUserEmail.split('@')[0], // Якщо немає імені, беремо нік з пошти
+                        email: otherUserEmail,
+                        subtitle: chat.lastMessage?.text || "No messages yet",
+                        time: timeString
+                    };
+                });
+                
+                setUserChats(mappedChats);
+            }
+        } catch (err) {
+            console.error("Помилка завантаження списку чатів:", err);
+        }
+    };
+
+    fetchMyChats();
+  }, [currentUser, refreshTrigger]);
+
   const UserSkeleton = () => (
     <div className="flex items-center gap-3 px-4 py-2 animate-pulse">
       <div className="w-8 h-8 rounded-full bg-white/10 shrink-0"></div>
@@ -63,14 +108,24 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
     </div>
   );
 
+  // ЗАПОБІЖНИК: вирішуємо, який масив рендерити
+  const chatListToRender = (Array.isArray(userChats) && userChats.length > 0) ? userChats : messages;
+
   return (
-    // ГЛАССМОРФІЗМ 2.0: Додано border-t-white/10 для об'єму
     <div className="w-80 bg-[#171635]/95 backdrop-blur-xl flex flex-col h-screen border-r border-white/5 border-t border-t-white/10 font-sans relative z-20">
+
+      {/* ДОДАЙТЕ ЦЕЙ БЛОК СТИЛІВ ОСЬ ТУТ */}
+      <style>
+        {`
+          .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.2); }
+        `}
+      </style>
       
       <div className="px-6 pt-6 pb-4 cursor-pointer" onClick={() => onNavigate('welcome')}>
-        <h1 className="text-white text-2xl font-semibold tracking-tight">
-          Fast<span className="text-[#8b5cf6]">Line</span>
-        </h1>
+        <h1 className="text-white text-2xl font-semibold tracking-tight">Fast<span className="text-[#8b5cf6]">Line</span></h1>
       </div>
 
       <div className="px-6 pb-4 relative z-50">
@@ -86,25 +141,19 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
         </div>
 
         {showDropdown && (
-          // ГЛАССМОРФІЗМ 2.0: border-t-white/20 для випадаючого меню
           <div className="absolute left-6 right-6 top-full mt-2 bg-[#1d1a4a]/95 backdrop-blur-lg border border-white/10 border-t-white/20 rounded-xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto custom-scrollbar z-50">
             {isSearching ? (
-              // СКЕЛЕТНЕ ЗАВАНТАЖЕННЯ (Пункт 5)
-              <div className="py-2 space-y-1">
-                <UserSkeleton />
-                <UserSkeleton />
-                <UserSkeleton />
-              </div>
+              <div className="py-2 space-y-1"><UserSkeleton /><UserSkeleton /></div>
             ) : searchResults.length > 0 ? (
               <div className="py-2">
-                {searchResults.map((user, idx) => (
-                  // ЕФЕКТ НАТИСКАННЯ (Пункт 1): active:scale-98
+                {(searchResults || []).map((user, idx) => (
                   <div 
                     key={idx} 
                     className="flex items-center gap-3 px-4 py-2 hover:bg-white/5 active:scale-98 cursor-pointer transition-all" 
                     onClick={() => {
                       setShowDropdown(false);
                       setSearchQuery('');
+                      if (onStartChat) onStartChat(user);
                     }}
                   >
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
@@ -115,8 +164,8 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-200 truncate">{user.displayName || user.name}</div>
-                      <div className="text-[11px] text-[#8b5cf6] truncate">{user.tag || `@${user.email?.split('@')[0]}`}</div>
+                      <div className="text-sm font-medium text-gray-200 truncate">{user.displayName || user.name || "User"}</div>
+                      <div className="text-[11px] text-[#8b5cf6] truncate">{user.tag || `@${user.email?.split('@')[0] || 'user'}`}</div>
                     </div>
                   </div>
                 ))}
@@ -137,22 +186,16 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
           <div className="flex items-center gap-2 text-[11px] font-bold text-[#a19bfe] uppercase tracking-widest mb-4 opacity-80">
             <FolderKanban size={12} /> <span>Projects</span>
           </div>
-          
           <div className="space-y-1">
             {projects.map((proj, idx) => (
-              // ЕФЕКТ НАТИСКАННЯ: active:scale-95 transition-all
               <div key={idx} className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 active:scale-95 cursor-pointer transition-all">
-                <div className="w-10 h-10 rounded-full bg-[#1e2336] border border-white/10 flex items-center justify-center text-white font-medium text-sm">
-                  {proj.img}
-                </div>
+                <div className="w-10 h-10 rounded-full bg-[#1e2336] border border-white/10 flex items-center justify-center text-white font-medium text-sm">{proj.img}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline">
                     <span className="text-gray-200 text-sm font-medium truncate group-hover:text-white transition-colors">{proj.name}</span>
                     <span className="text-[10px] text-gray-600">{proj.time}</span>
                   </div>
-                  <div className="text-[11px] text-gray-500 truncate group-hover:text-gray-400 transition">
-                    {proj.subtitle}
-                  </div>
+                  <div className="text-[11px] text-gray-500 truncate group-hover:text-gray-400 transition">{proj.subtitle}</div>
                 </div>
               </div>
             ))}
@@ -162,24 +205,12 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
         {/* GROUPS */}
         <div>
           <div className="flex items-center justify-between text-[11px] text-[#cac7f4] font-bold uppercase tracking-widest mb-4 opacity-80">
-            <div className="flex items-center gap-2">
-              <Users size={12} /> <span>Groups</span>
-            </div>
-            {/* ЕФЕКТ НАТИСКАННЯ: active:scale-90 */}
-            <button 
-              onClick={() => onNavigate('group_chat')} 
-              className="p-1 hover:bg-white/10 active:scale-90 rounded-md transition-all text-[#a19bfe] hover:text-white"
-              title="Create new group"
-            >
-              <Plus size={14} />
-            </button>
+            <div className="flex items-center gap-2"><Users size={12} /> <span>Groups</span></div>
+            <button onClick={() => onNavigate('group_chat')} className="p-1 hover:bg-white/10 active:scale-90 rounded-md transition-all text-[#a19bfe] hover:text-white"><Plus size={14} /></button>
           </div>
-
           <div className="space-y-1">
              <div onClick={() => onNavigate('group_chat')} className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 active:scale-95 cursor-pointer transition-all">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-500 to-orange-400 flex items-center justify-center text-white text-xs font-bold border-2 border-transparent ring-2 ring-[#0f111a]">
-                  🚀
-                </div>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-500 to-orange-400 flex items-center justify-center text-white text-xs font-bold border-2 border-transparent ring-2 ring-[#0f111a]">🚀</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline">
                     <span className="text-gray-200 text-sm font-medium truncate group-hover:text-white transition-colors">Frontend Team</span>
@@ -198,18 +229,28 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
           </div>
 
           <div className="space-y-1">
-            {messages.map((msg, idx) => (
-              <div key={idx} onClick={() => onNavigate('chat_maxim')} className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 active:scale-95 cursor-pointer transition-all">
-                <div className={`w-10 h-10 rounded-full ${msg.color} flex items-center justify-center text-white text-xs font-bold border-2 border-transparent ring-2 ring-[#0f111a]`}>
-                  {msg.img}
+            {chatListToRender.filter(Boolean).map((msg, idx) => (
+              <div 
+                key={msg.id || idx} 
+                onClick={() => {
+                   if (msg.id && onStartChat) {
+                       onStartChat({ email: msg.email || msg.name, name: msg.name || "User", id: msg.id });
+                   } else {
+                       onNavigate('chat_maxim'); 
+                   }
+                }} 
+                className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 active:scale-95 cursor-pointer transition-all"
+              >
+                <div className={`w-10 h-10 rounded-full ${msg.color || 'bg-[#1e2336]'} flex items-center justify-center text-white text-xs font-bold border-2 border-transparent ring-2 ring-[#0f111a]`}>
+                  {msg.img || msg.name?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline">
-                    <span className="text-gray-200 text-sm font-medium truncate group-hover:text-white transition-colors">{msg.name}</span>
-                    <span className="text-[10px] text-gray-600">{msg.time}</span>
+                    <span className="text-gray-200 text-sm font-medium truncate group-hover:text-white transition-colors">{msg.name || "User"}</span>
+                    <span className="text-[10px] text-gray-600">{msg.time || "recent"}</span>
                   </div>
                   <div className="text-[11px] text-gray-500 truncate group-hover:text-gray-400 transition">
-                    {msg.subtitle}
+                    {msg.subtitle || "Chat opened"}
                   </div>
                 </div>
               </div>
@@ -223,9 +264,7 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
       <div className="mt-auto pt-4 pb-4 px-4">
         <div className="h-[1px] bg-white/5 w-full mb-4"></div>
           {currentUser && (
-            // ГЛАССМОРФІЗМ 2.0: border-t-white/10
             <div className="bg-[#1d1a4a] border border-white/5 border-t-white/10 rounded-2xl p-3 flex items-center gap-3 shadow-lg cursor-pointer hover:border-purple-500/20 transition-all group">
-              
               <div className="relative">
                 <div className="w-10 h-10 rounded-full overflow-hidden border-[2px] border-white shadow-sm">
                 {currentUser.avatar ? (
@@ -236,17 +275,13 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout }) => {
                   </div>
                 )}
               </div>
-                {/* МІКРОІНТЕРАКЦІЯ (Пункт 1): animate-pulse для онлайн-статусу */}
                 <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#1d1a4a] ${currentUser.status === "online" ? "bg-green-500 animate-pulse" : "bg-gray-500"}`}/>
               </div>
-
               <div className="flex-1 overflow-hidden">
                 <div className="text-white text-sm font-semibold truncate group-hover:text-purple-300 transition-colors">{currentUser.name || "Unknown User"}</div>
                 <div className="text-[10px] text-[#8b5cf6] font-medium truncate">{currentUser.handle || "@no_tag"}</div>
               </div>
-
               <div className="flex flex-col gap-1 text-gray-500">
-                {/* МІКРОІНТЕРАКЦІЯ: active:scale-90 transition */}
                 <Settings onClick={onProfileClick} size={16} className="hover:text-white active:scale-90 transition" />
                 <LogOut onClick={onLogout} size={16} className="hover:text-red-400 active:scale-90 transition" />
               </div>

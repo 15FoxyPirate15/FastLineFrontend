@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { initSocket, getSocket } from './socket';
 import Sidebar from './components/Sidebar';
 import WelcomeScreen from './components/WelcomeScreen';
 import ChatArea from './components/ChatArea';
-import ProfileSettings from './components/ProfileSettings';
 import EditProfile from './components/EditProfile';
 import GroupChatArea from './components/GroupChatArea';
 import QuickNav from './components/QuickNav';
@@ -15,7 +15,31 @@ import MeetingsPage from './components/MeetingsPage';
 import Login from './components/Login';
 import './components/Login.css'; 
 
-import { createSocket } from './socket';
+// --- ЗАПОБІЖНИК ВІД СИНІХ ЕКРАНІВ ---
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex-1 p-10 bg-black text-red-500 overflow-auto h-full z-50">
+          <h1 className="text-2xl font-bold mb-4">Ой, React впав! 💥</h1>
+          <p className="mb-4">Замість синього екрану, ось причина помилки:</p>
+          <pre className="bg-gray-900 p-4 rounded-xl text-sm whitespace-pre-wrap">
+            {this.state.error?.toString()}
+          </pre>
+          <button onClick={() => window.location.reload()} className="mt-6 px-4 py-2 bg-white text-black rounded-xl">Перезавантажити</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
@@ -23,10 +47,11 @@ function App() {
   const [socket, setSocket] = useState(null);
   const [user, setUser] = useState(null);
   const [theme, setTheme] = useState('default');
+  const [selectedChatUser, setSelectedChatUser] = useState(null);
+  const [refreshSidebar, setRefreshSidebar] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated) return;
-
     let isMounted = true;
 
     const fetchCurrentUser = async () => {
@@ -34,13 +59,9 @@ function App() {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        // Завантаження даних профілю
         const res = await fetch("https://backendfastline.onrender.com/auth/me", {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         });
-
         if (!res.ok) throw new Error("Failed to fetch user");
 
         const data = await res.json();
@@ -58,13 +79,8 @@ function App() {
           });
         }
 
-        // Ініціалізація сокета
-        const newSocket = createSocket(token);
+        const newSocket = initSocket(token);
         setSocket(newSocket);
-
-        newSocket.on('connect', () => {
-          console.log('🟢 Socket connected:', newSocket.id);
-        });
 
       } catch (err) {
         console.error("❌ Error fetching user:", err);
@@ -78,7 +94,7 @@ function App() {
 
     return () => {
       isMounted = false;
-      if (socket) socket.disconnect();
+      if (getSocket()) getSocket().disconnect();
     };
   }, [isAuthenticated]);
 
@@ -102,35 +118,33 @@ function App() {
 
     switch(activeView) {
       case 'ai_chat':
-        return <ChatArea key="ai" chatName="AI Assistant" isAi={true} currentUser={user} socket={socket} />;
-      case 'chat_maxim':
-          return <ChatArea key="maxim" chatName="Maxim" isAi={false} currentUser={user} socket={socket} onBack={() => setActiveView('welcome')} />;
+        return <ChatArea key="ai" chatName="AI Assistant" isAi={true} currentUser={user} socket={socket} roomId="ai_room" onBack={() => setActiveView('welcome')} />;
+      case 'chat_direct':
+        return <ChatArea 
+            key={`chat_${selectedChatUser?.roomId || selectedChatUser?.id || 'temp'}`} 
+            chatName={selectedChatUser?.displayName || selectedChatUser?.name || "User"} 
+            isAi={false} 
+            currentUser={user} 
+            socket={socket} 
+            // ВИПРАВЛЕНО: передаємо реальний roomId з бекенду
+            roomId={selectedChatUser?.roomId || `temp_room_${selectedChatUser?.id || Date.now()}`} 
+            onBack={() => setActiveView('welcome')} 
+        />;
       case 'group_chat':
-          return <GroupChatArea groupName="Frontend Team" currentUser={user} onBack={() => setActiveView('welcome')} />;
-      case 'chat_maxim':
-        return <ChatArea key="maxim" chatName="Maxim" isAi={false} currentUser={user} socket={socket} />;
-      case 'profile':
-        return <ProfileSettings currentUser={user} updateProfile={(newData) => {
-          setUser(newData);
-          setActiveView('welcome'); 
-        }} />;
+        return <GroupChatArea groupName="Frontend Team" currentUser={user} socket={socket} roomId="room_frontend_team" onBack={() => setActiveView('welcome')} />;
       case 'edit_profile':
-          return <EditProfile 
-              currentUser={user} 
-              onBack={() => setActiveView('welcome')} 
-              onSave={(newData) => {
-                  setUser(prev => ({ ...prev, ...newData }));
-                  setActiveView('welcome');
-              }}
-          />;
-      case 'tasks':
-        return <TasksPage />;
-      case 'calendar':
-        return <CalendarPage />;
-      case 'calls':
-        return <CallsPage />;
-      case 'meetings':
-        return <MeetingsPage />;
+        return <EditProfile 
+            currentUser={user} 
+            onBack={() => setActiveView('welcome')} 
+            onSave={(newData) => {
+                setUser(prev => ({ ...prev, ...newData }));
+                setActiveView('welcome');
+            }}
+        />;
+      case 'tasks': return <TasksPage onNavigate={setActiveView} />;
+      case 'calendar': return <CalendarPage onNavigate={setActiveView} />;
+      case 'calls': return <CallsPage onNavigate={setActiveView} />;
+      case 'meetings': return <MeetingsPage onNavigate={setActiveView} />;
       default:
         return (
           <div className="relative h-full flex flex-col">
@@ -140,43 +154,63 @@ function App() {
     }
   };
 
-  if (!isAuthenticated) {
-    return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
-  }
+  if (!isAuthenticated) return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
 
-return (
+  return (
     <div className="flex h-screen w-full overflow-hidden bg-black">
-      
-      {/* 1. ДОДАЄМО СТИЛЬ АНІМАЦІЇ ПРЯМО СЮДИ */}
       <style>
         {`
-          @keyframes pageFadeIn {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          .animate-page {
-            animation: pageFadeIn 0.35s ease-out forwards;
-          }
+          @keyframes pageFadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+          .animate-page { animation: pageFadeIn 0.35s ease-out forwards; }
         `}
       </style>
 
-      <Sidebar 
-          onNavigate={setActiveView} 
-          currentUser={user} 
-          onProfileClick={() => setActiveView('edit_profile')}
-          onLogout={handleLogout}
+    <Sidebar 
+    onNavigate={setActiveView} 
+        currentUser={user} 
+        onProfileClick={() => setActiveView('edit_profile')}
+        onLogout={handleLogout}
+        refreshTrigger={refreshSidebar} // ДОДАНО
+        onStartChat={async (targetUser) => {
+            if (!targetUser) return;
+            const token = localStorage.getItem('token');
+            let finalRoomId = `temp_room_${targetUser.id || Date.now()}`;
+            
+            try {
+                const response = await fetch('https://backendfastline.onrender.com/chats/private', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        u1: user?.email,     
+                        u2: targetUser?.email || targetUser?.tag
+                    })
+                });
+
+                if (response.ok) {
+                    const chatData = await response.json();
+                    finalRoomId = chatData?.id || finalRoomId; 
+                }
+            } catch (err) {
+                console.warn("Бекенд не створив чат:", err);
+            }
+
+            setSelectedChatUser({ ...targetUser, roomId: finalRoomId });
+            setActiveView('chat_direct');
+            setRefreshSidebar(prev => prev + 1); // ДОДАНО: Змушуємо сайдбар оновитись!
+        }}
       />
       
       <div className={`flex-1 ${getBackground()} transition-all duration-1000 ease-in-out relative overflow-hidden`}>
-        
-        {/* QuickNav тепер тут */}
         <QuickNav activeView={activeView} onNavigate={setActiveView} />
 
-        {/* 2. ЗАСТОСОВУЄМО КЛАС animate-page ТА key */}
         <div key={activeView} className="h-full animate-page">
-          {renderContent()}
+          <ErrorBoundary>
+            {renderContent()}
+          </ErrorBoundary>
         </div>
-
       </div>
     </div>
   );
