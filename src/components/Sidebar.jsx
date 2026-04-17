@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Settings, LogOut, FolderKanban, MessageSquare, Plus, Users } from 'lucide-react';
 
 const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartChat, refreshTrigger }) => {
@@ -7,18 +7,26 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [userChats, setUserChats] = useState([]);
+  const [isLoadingChats, setIsLoadingChats] = useState(true);
+  
+  // ДОДАНО РЕФ ДЛЯ ПОШУКУ
+  const searchContainerRef = useRef(null);
   
   const projects = [
     { name: "Maxim Project", subtitle: "Orest: Max, go pit piva...", time: "13:45", img: "M" },
     { name: "Stanislav Project", subtitle: "Foxy Pirate: Kogda tu sdelaesh...", time: "just now", img: "S" }
   ];
 
-  const messages = [
-    { name: "Foxy Pirate", subtitle: "Yake homework z English...", time: "yesterday", img: "F", color: "bg-red-500" },
-    { name: "Katya", subtitle: "You: Принеси пампухи...", time: "Monday", img: "K", color: "bg-yellow-500" },
-    { name: "Sonya", subtitle: "Posmotri moi tiktoks", time: "09:12", img: "S", color: "bg-green-500" },
-    { name: "Hot Pupsik", subtitle: "No messages yet", time: "", img: "H", color: "bg-orange-500" }
-  ];
+  // ДОДАНО ЗАКРИТТЯ ПОШУКУ ПО КЛІКУ ЗОВНІ
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSearch = async (e) => {
     const query = e.target.value;
@@ -27,13 +35,11 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
     if (query.trim().length > 0) {
       setShowDropdown(true);
       setIsSearching(true);
-      
       try {
         const token = localStorage.getItem('token');
         const response = await fetch(`https://backendfastline.onrender.com/users/search?q=${encodeURIComponent(query)}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-
         if (response.ok) {
           const data = await response.json();
           setSearchResults(Array.isArray(data) ? data : []); 
@@ -51,11 +57,11 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
     }
   };
 
-  // ОНОВЛЕНИЙ useEffect: правильний парсинг учасників та часу Firebase
   useEffect(() => {
     if (!currentUser?.email) return;
 
     const fetchMyChats = async () => {
+        setIsLoadingChats(true);
         try {
             const res = await fetch(`https://backendfastline.onrender.com/chats/user/${currentUser.email}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -65,33 +71,30 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
             
             if (Array.isArray(data)) {
                 const mappedChats = data.map(chat => {
-                    // Знаходимо email співрозмовника
                     let otherUserEmail = "Unknown User";
                     if (chat.participants && Array.isArray(chat.participants)) {
                         otherUserEmail = chat.participants.find(email => email !== currentUser.email) || chat.participants[0];
                     }
-
-                    // Форматуємо час з урахуванням формату Firebase (_seconds)
                     let timeString = "";
                     const timeSource = chat.lastMessage?.sentAt || chat.createdAt;
                     if (timeSource) {
                         const dateObj = timeSource._seconds ? new Date(timeSource._seconds * 1000) : new Date(timeSource);
                         timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     }
-
                     return {
                         id: chat.id,
-                        name: chat.name || otherUserEmail.split('@')[0], // Якщо немає імені, беремо нік з пошти
+                        name: chat.name || otherUserEmail.split('@')[0],
                         email: otherUserEmail,
                         subtitle: chat.lastMessage?.text || "No messages yet",
                         time: timeString
                     };
                 });
-                
                 setUserChats(mappedChats);
             }
         } catch (err) {
-            console.error("Помилка завантаження списку чатів:", err);
+            console.error("Chat loading error:", err);
+        } finally {
+            setIsLoadingChats(false);
         }
     };
 
@@ -108,40 +111,76 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
     </div>
   );
 
-  // ЗАПОБІЖНИК: вирішуємо, який масив рендерити
-  const chatListToRender = (Array.isArray(userChats) && userChats.length > 0) ? userChats : messages;
+  const ChatSkeleton = () => (
+    <div className="flex items-center gap-3 p-2 rounded-xl animate-pulse">
+      <div className="w-10 h-10 rounded-full bg-[#8b5cf6]/20 shrink-0 border border-white/5"></div>
+      <div className="flex-1 space-y-2.5">
+        <div className="flex justify-between">
+            <div className="h-3 bg-white/10 rounded w-1/2"></div>
+            <div className="h-2 bg-white/5 rounded w-1/6 mt-1"></div>
+        </div>
+        <div className="h-2 bg-white/5 rounded w-3/4"></div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="w-80 bg-[#171635]/95 backdrop-blur-xl flex flex-col h-screen border-r border-white/5 border-t border-t-white/10 font-sans relative z-20">
-
-      {/* ДОДАЙТЕ ЦЕЙ БЛОК СТИЛІВ ОСЬ ТУТ */}
+      
       <style>
         {`
           .custom-scrollbar::-webkit-scrollbar { width: 5px; }
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
           .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(255, 255, 255, 0.1); border-radius: 10px; }
           .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.2); }
+          
+          .ripple-effect {
+            position: relative;
+            overflow: hidden;
+          }
+          .ripple-effect::after {
+            content: "";
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+            background-repeat: no-repeat;
+            background-position: 50%;
+            transform: scale(10, 10);
+            opacity: 0;
+            transition: transform .5s, opacity 1s;
+          }
+          .ripple-effect:active::after {
+            transform: scale(0, 0);
+            opacity: .15;
+            transition: 0s;
+          }
         `}
       </style>
-      
+
       <div className="px-6 pt-6 pb-4 cursor-pointer" onClick={() => onNavigate('welcome')}>
         <h1 className="text-white text-2xl font-semibold tracking-tight">Fast<span className="text-[#8b5cf6]">Line</span></h1>
       </div>
 
-      <div className="px-6 pb-4 relative z-50">
-        <div className="bg-[#0c1021] flex items-center px-3 py-2.5 rounded-xl border border-white/5 focus-within:border-purple-500/50 transition-colors shadow-inner">
+      {/* ДОДАНО REF НА КОНТЕЙНЕР ПОШУКУ */}
+      <div className="px-6 pb-4 relative z-50" ref={searchContainerRef}>
+        <div className="bg-[#0c1021] flex items-center px-3 py-2.5 rounded-xl border border-white/5 focus-within:ring-2 focus-within:ring-[#8b5cf6]/50 focus-within:border-[#8b5cf6]/50 focus-within:shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all duration-300">
           <Search size={18} className="text-[#a19bfe] mr-3" />
           <input 
             type="text" 
-            placeholder="Search users (e.g. @foxy)..." 
+            placeholder="Search users..." 
             value={searchQuery}
             onChange={handleSearch}
-            className="bg-transparent border-none outline-none text-sm text-gray-300 w-full placeholder-gray-600" 
+            className="bg-transparent border-none outline-none text-sm text-gray-200 w-full placeholder-gray-600" 
           />
         </div>
 
         {showDropdown && (
-          <div className="absolute left-6 right-6 top-full mt-2 bg-[#1d1a4a]/95 backdrop-blur-lg border border-white/10 border-t-white/20 rounded-xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto custom-scrollbar z-50">
+          <div className="absolute left-6 right-6 top-full mt-2 bg-[#1d1a4a]/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto custom-scrollbar z-50 animate-in fade-in zoom-in-95 duration-200">
             {isSearching ? (
               <div className="py-2 space-y-1"><UserSkeleton /><UserSkeleton /></div>
             ) : searchResults.length > 0 ? (
@@ -149,7 +188,7 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
                 {(searchResults || []).map((user, idx) => (
                   <div 
                     key={idx} 
-                    className="flex items-center gap-3 px-4 py-2 hover:bg-white/5 active:scale-98 cursor-pointer transition-all" 
+                    className="ripple-effect flex items-center gap-3 px-4 py-2 hover:bg-[#8b5cf6]/10 cursor-pointer transition-colors" 
                     onClick={() => {
                       setShowDropdown(false);
                       setSearchQuery('');
@@ -171,7 +210,7 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
                 ))}
               </div>
             ) : (
-              <div className="p-4 text-center text-sm text-gray-500">Користувачів не знайдено</div>
+              <div className="p-4 text-center text-sm text-gray-500">No users found</div>
             )}
           </div>
         )}
@@ -188,8 +227,8 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
           </div>
           <div className="space-y-1">
             {projects.map((proj, idx) => (
-              <div key={idx} className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 active:scale-95 cursor-pointer transition-all">
-                <div className="w-10 h-10 rounded-full bg-[#1e2336] border border-white/10 flex items-center justify-center text-white font-medium text-sm">{proj.img}</div>
+              <div key={idx} className="ripple-effect group flex items-center gap-3 p-2 rounded-xl hover:bg-[#8b5cf6]/10 hover:border-[#8b5cf6]/20 border border-transparent cursor-pointer transition-all">
+                <div className="w-10 h-10 rounded-full bg-[#1e2336] border border-white/10 flex items-center justify-center text-white font-medium text-sm group-hover:border-[#8b5cf6]/50 transition-colors">{proj.img}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline">
                     <span className="text-gray-200 text-sm font-medium truncate group-hover:text-white transition-colors">{proj.name}</span>
@@ -209,8 +248,8 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
             <button onClick={() => onNavigate('group_chat')} className="p-1 hover:bg-white/10 active:scale-90 rounded-md transition-all text-[#a19bfe] hover:text-white"><Plus size={14} /></button>
           </div>
           <div className="space-y-1">
-             <div onClick={() => onNavigate('group_chat')} className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 active:scale-95 cursor-pointer transition-all">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-500 to-orange-400 flex items-center justify-center text-white text-xs font-bold border-2 border-transparent ring-2 ring-[#0f111a]">🚀</div>
+             <div onClick={() => onNavigate('group_chat')} className="ripple-effect group flex items-center gap-3 p-2 rounded-xl hover:bg-[#8b5cf6]/10 hover:border-[#8b5cf6]/20 border border-transparent cursor-pointer transition-all">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-500 to-orange-400 flex items-center justify-center text-white text-xs font-bold border-2 border-transparent group-hover:ring-2 ring-[#8b5cf6]/50 transition-all">🚀</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline">
                     <span className="text-gray-200 text-sm font-medium truncate group-hover:text-white transition-colors">Frontend Team</span>
@@ -229,32 +268,40 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
           </div>
 
           <div className="space-y-1">
-            {chatListToRender.filter(Boolean).map((msg, idx) => (
-              <div 
-                key={msg.id || idx} 
-                onClick={() => {
-                   if (msg.id && onStartChat) {
-                       onStartChat({ email: msg.email || msg.name, name: msg.name || "User", id: msg.id });
-                   } else {
-                       onNavigate('chat_maxim'); 
-                   }
-                }} 
-                className="group flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 active:scale-95 cursor-pointer transition-all"
-              >
-                <div className={`w-10 h-10 rounded-full ${msg.color || 'bg-[#1e2336]'} flex items-center justify-center text-white text-xs font-bold border-2 border-transparent ring-2 ring-[#0f111a]`}>
-                  {msg.img || msg.name?.[0]?.toUpperCase() || '?'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-gray-200 text-sm font-medium truncate group-hover:text-white transition-colors">{msg.name || "User"}</span>
-                    <span className="text-[10px] text-gray-600">{msg.time || "recent"}</span>
+            {isLoadingChats ? (
+                <>
+                    <ChatSkeleton />
+                    <ChatSkeleton />
+                    <ChatSkeleton />
+                </>
+            ) : (
+                userChats.map((msg, idx) => (
+                  <div 
+                    key={msg.id || idx} 
+                    onClick={() => {
+                       if (msg.id && onStartChat) {
+                           onStartChat({ email: msg.email || msg.name, name: msg.name || "User", id: msg.id });
+                       } else {
+                           onNavigate('chat_maxim'); 
+                       }
+                    }} 
+                    className="ripple-effect group flex items-center gap-3 p-2 rounded-xl hover:bg-[#8b5cf6]/10 hover:border-[#8b5cf6]/20 border border-transparent cursor-pointer transition-all"
+                  >
+                    <div className={`w-10 h-10 rounded-full ${msg.color || 'bg-[#1e2336]'} flex items-center justify-center text-white text-xs font-bold border-2 border-transparent group-hover:ring-2 ring-[#8b5cf6]/50 transition-all`}>
+                      {msg.img || msg.name?.[0]?.toUpperCase() || '?'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-gray-200 text-sm font-medium truncate group-hover:text-white transition-colors">{msg.name || "User"}</span>
+                        <span className="text-[10px] text-gray-600">{msg.time || "recent"}</span>
+                      </div>
+                      <div className="text-[11px] text-gray-500 truncate group-hover:text-gray-400 transition">
+                        {msg.subtitle || "Chat opened"}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-[11px] text-gray-500 truncate group-hover:text-gray-400 transition">
-                    {msg.subtitle || "Chat opened"}
-                  </div>
-                </div>
-              </div>
-            ))}
+                ))
+            )}
           </div>
         </div>
 
@@ -264,9 +311,9 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
       <div className="mt-auto pt-4 pb-4 px-4">
         <div className="h-[1px] bg-white/5 w-full mb-4"></div>
           {currentUser && (
-            <div className="bg-[#1d1a4a] border border-white/5 border-t-white/10 rounded-2xl p-3 flex items-center gap-3 shadow-lg cursor-pointer hover:border-purple-500/20 transition-all group">
+            <div className="bg-[#1d1a4a] border border-white/5 border-t-white/10 rounded-2xl p-3 flex items-center gap-3 shadow-lg cursor-pointer hover:border-purple-500/30 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all group">
               <div className="relative">
-                <div className="w-10 h-10 rounded-full overflow-hidden border-[2px] border-white shadow-sm">
+                <div className="w-10 h-10 rounded-full overflow-hidden border-[2px] border-white/20 group-hover:border-[#8b5cf6] transition-colors shadow-sm">
                 {currentUser.avatar ? (
                   <img src={currentUser.avatar} alt={currentUser.name || "User"} className="w-full h-full object-cover"/>
                 ) : (
