@@ -1,17 +1,18 @@
 import { io } from 'socket.io-client';
 
-export const createSocket = () => {
-  const token = localStorage.getItem('token');
+let socket = null;
 
-  if (!token) {
-    console.warn('❌ No token, socket not created');
-    return null;
+export const initSocket = (token) => {
+  if (!socket && token) {
+    socket = io('https://backendfastline.onrender.com', {
+      auth: { token: token },
+      transports: ['websocket']
+    });
+
+    socket.on('connect', () => console.log('🟢 Сокет успішно підключено!'));
+    socket.on('disconnect', () => console.log('🔴 Сокет відключено!'));
   }
-
-  return io('https://backendfastline.onrender.com', {
-    auth: {
-      token,
-    },
-    transports: ['websocket'],
-  });
+  return socket;
 };
+
+export const getSocket = () => socket;
