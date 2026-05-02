@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import Loader from './Loader'; 
-import { ShieldCheck, Users, Kanban, Zap } from 'lucide-react';
+import Loader from './Loader';
+import { ShieldCheck, Users, Kanban, Zap, MailCheck } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 const getFriendlyErrorMessage = (errorMsg) => {
   if (!errorMsg) return "Something went wrong. Please try again.";
   const msg = errorMsg.toUpperCase();
-  
+ 
   if (msg.includes('INVALID_LOGIN_CREDENTIALS') || msg.includes('WRONG-PASSWORD') || msg.includes('USER-NOT-FOUND')) {
     return "Invalid email or password. Please try again.";
   }
@@ -19,13 +19,13 @@ const getFriendlyErrorMessage = (errorMsg) => {
   if (msg.includes('INVALID-EMAIL')) {
     return "Please enter a valid email address.";
   }
-  
+ 
   return "Authentication failed. Please try again.";
 };
 
 const AnimatedLinesBackground = () => {
   const [lines, setLines] = useState([]);
-  
+ 
   useEffect(() => {
     const generatedLines = Array.from({ length: 15 }).map((_, i) => ({
       id: i,
@@ -68,51 +68,48 @@ const AnimatedLinesBackground = () => {
 };
 
 const DefinitionSide = () => (
-  <div className="flex flex-col gap-10 text-white animate-in fade-in slide-in-from-left-8 duration-1000 ease-out z-10 relative">
+  <div className="flex flex-col gap-10 text-white z-10 relative">
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      {/* Логотип і назва: з'являються першими (delay-150) */}
+      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-6 duration-700 delay-150 fill-mode-backwards">
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#6d28d9] to-[#3b82f6] flex items-center justify-center shadow-[0_0_20px_rgba(109,40,217,0.4)]">
           <Zap size={24} className="text-white" />
         </div>
         <h1 className="text-4xl font-black tracking-tight">FastLine</h1>
       </div>
-      <p className="text-[#a19bfe] text-lg max-w-md leading-relaxed font-medium">
+      
+      {/* Підзаголовок: з'являється другим (delay-300) */}
+      <p className="text-[#a19bfe] text-lg max-w-md leading-relaxed font-medium animate-in fade-in slide-in-from-left-6 duration-700 delay-300 fill-mode-backwards">
         Your secure workspace for team collaboration, project management, and professional communication.
       </p>
     </div>
 
     <div className="space-y-8 mt-4">
-      <div className="flex gap-4 group">
-        <div className="mt-1"><ShieldCheck size={26} className="text-[#a19bfe] group-hover:scale-110 group-hover:text-white transition-all" /></div>
-        <div>
-          <h3 className="text-lg font-bold text-gray-100 group-hover:text-white transition-colors">End-to-end encryption</h3>
-          <p className="text-gray-400 text-sm mt-1 leading-relaxed">Your messages are secure with military-grade encryption.</p>
+      {[
+        { Icon: ShieldCheck, title: "End-to-end encryption", desc: "Your messages are secure with military-grade encryption.", color: "text-[#a19bfe]", delay: "delay-[450ms]" },
+        { Icon: Users, title: "Real-time collaboration", desc: "Work together seamlessly with your team in real-time.", color: "text-[#3b82f6]", delay: "delay-[600ms]" },
+        { Icon: Kanban, title: "Project management tools", desc: "Organize tasks, schedule meetings, and track progress.", color: "text-[#ec4899]", delay: "delay-[750ms]" }
+      ].map((item, i) => (
+        // Іконки з описом: виїжджають по черзі
+        <div key={i} className={`flex gap-4 group animate-in fade-in slide-in-from-left-4 duration-700 fill-mode-backwards ${item.delay}`}>
+          <div className="mt-1"><item.Icon size={26} className={`${item.color} group-hover:scale-110 transition-all`} /></div>
+          <div>
+            <h3 className="text-lg font-bold text-gray-100 group-hover:text-white transition-colors">{item.title}</h3>
+            <p className="text-gray-400 text-sm mt-1 leading-relaxed">{item.desc}</p>
+          </div>
         </div>
-      </div>
-      <div className="flex gap-4 group">
-        <div className="mt-1"><Users size={26} className="text-[#3b82f6] group-hover:scale-110 group-hover:text-white transition-all" /></div>
-        <div>
-          <h3 className="text-lg font-bold text-gray-100 group-hover:text-white transition-colors">Real-time collaboration</h3>
-          <p className="text-gray-400 text-sm mt-1 leading-relaxed">Work together seamlessly with your team in real-time.</p>
-        </div>
-      </div>
-      <div className="flex gap-4 group">
-        <div className="mt-1"><Kanban size={26} className="text-[#ec4899] group-hover:scale-110 group-hover:text-white transition-all" /></div>
-        <div>
-          <h3 className="text-lg font-bold text-gray-100 group-hover:text-white transition-colors">Project management tools</h3>
-          <p className="text-gray-400 text-sm mt-1 leading-relaxed">Organize tasks, schedule meetings, and track progress.</p>
-        </div>
-      </div>
+      ))}
     </div>
   </div>
 );
 
 export default function Login({ onLoginSuccess }) {
-  const [view, setView] = useState('login'); 
+  const [view, setView] = useState('login'); // 'login' | 'register' | 'verify'
   const [isLoading, setIsLoading] = useState(false);
-  
+ 
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [regData, setRegData] = useState({ full_name: '', email: '', password: '' });
+  const [verificationCode, setVerificationCode] = useState('');
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -126,10 +123,10 @@ export default function Login({ onLoginSuccess }) {
       const data = await response.json();
       if (response.ok) {
         localStorage.setItem('token', data.token);
-        if (data.user) localStorage.setItem('user', JSON.stringify(data.user)); 
+        if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
         setTimeout(() => {
           setIsLoading(false);
-          if (onLoginSuccess) onLoginSuccess(data.user); 
+          if (onLoginSuccess) onLoginSuccess(data.user);
         }, 1000);
       } else {
         setIsLoading(false);
@@ -150,15 +147,15 @@ export default function Login({ onLoginSuccess }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(regData),
       });
-      
+     
       let data = {};
       try { data = await response.json(); } catch (e) {}
 
       if (response.ok) {
         setTimeout(() => {
           setIsLoading(false);
-          toast.success("Account created successfully! Please sign in.", { style: { background: '#1e1b2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }});
-          setView('login'); 
+          toast.success("Code sent to your email!", { style: { background: '#1e1b2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }});
+          setView('verify'); // Перемикаємо на вікно вводу коду
         }, 1000);
       } else {
         setIsLoading(false);
@@ -170,56 +167,138 @@ export default function Login({ onLoginSuccess }) {
     }
   };
 
+  const handleVerifySubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch('https://backendfastline.onrender.com/auth/verify', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: regData.email, code: verificationCode }),
+      });
+
+      if (response.ok) {
+        toast.success("Email verified!", { style: { background: '#1e1b2e', color: '#fff' }});
+        
+        // Автоматичний логін одразу після успішного підтвердження
+        const loginRes = await fetch('https://backendfastline.onrender.com/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: regData.email, password: regData.password })
+        });
+        
+        const loginData = await loginRes.json();
+        
+        if (loginRes.ok) {
+          localStorage.setItem('token', loginData.token);
+          if (loginData.user) localStorage.setItem('user', JSON.stringify(loginData.user)); 
+          setTimeout(() => { setIsLoading(false); if (onLoginSuccess) onLoginSuccess(loginData.user); }, 1000);
+        } else {
+          setIsLoading(false);
+          setView('login');
+        }
+
+      } else {
+        setIsLoading(false);
+        toast.error("Invalid verification code.", { style: { background: '#1e1b2e', color: '#fff' }});
+      }
+    } catch (err) {
+      setIsLoading(false);
+      toast.error("Server connection error. Please try again.", { style: { background: '#1e1b2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }});
+    }
+  };
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-[#030408]">
-      
+     
       <Toaster position="top-center" />
-      {isLoading && <Loader title={view === 'login' ? "Signing in..." : "Creating account..."} subtitle="Connecting to your secure workspace." />}
+      {isLoading && <Loader title={view === 'verify' ? "Verifying..." : view === 'login' ? "Signing in..." : "Creating account..."} subtitle="Please wait..." />}
 
       <AnimatedLinesBackground />
 
       <div className="max-w-[1100px] w-full mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center z-10 relative py-12">
-        
+       
         <DefinitionSide />
-        
-        <div className="flex justify-center lg:justify-end animate-in fade-in slide-in-from-bottom-12 zoom-in-95 duration-1000 ease-out">
-          
-          <div className="w-full max-w-[420px] bg-[#101426]/70 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
-            
-            {/* TOGGLE */}
-            <div className="flex bg-[#060813] p-1.5 rounded-xl mb-8 border border-white/5 shadow-inner relative z-10">
-              <button 
-                type="button"
-                onClick={() => setView('login')}
-                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 ${view === 'login' ? 'bg-[#6d28d9] text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}`}
-              >
-                Sign In
-              </button>
-              <button 
-                type="button"
-                onClick={() => setView('register')}
-                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 ${view === 'register' ? 'bg-[#6d28d9] text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}`}
-              >
-                Register
-              </button>
-            </div>
+       
+        <div className="flex justify-center lg:justify-end">
+         
+          {/* Вікно форми з анімацією затримки (delay-500) */}
+          <div className="w-full max-w-[420px] bg-[#101426]/70 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] relative overflow-hidden animate-in fade-in slide-in-from-bottom-12 duration-700 delay-500 fill-mode-backwards">
+           
+            {/* TOGGLE (Ховається під час верифікації) */}
+            {view !== 'verify' && (
+              <div className="flex bg-[#060813] p-1.5 rounded-xl mb-8 border border-white/5 shadow-inner relative z-10">
+                <button
+                  type="button"
+                  onClick={() => setView('login')}
+                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 ${view === 'login' ? 'bg-[#6d28d9] text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView('register')}
+                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 ${view === 'register' ? 'bg-[#6d28d9] text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                  Register
+                </button>
+              </div>
+            )}
 
             <div key={view} className="animate-in fade-in slide-in-from-left-2 duration-300 relative z-10">
-              
-              {view === 'login' ? (
+             
+              {/* ФОРМА ВЕРИФІКАЦІЇ КОДУ */}
+              {view === 'verify' ? (
+                <form onSubmit={handleVerifySubmit} className="space-y-6">
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 bg-[#6d28d9]/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#6d28d9]/50">
+                      <MailCheck size={28} className="text-[#a19bfe]" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white tracking-tight">Check your email</h3>
+                    <p className="text-gray-400 text-sm mt-2 leading-relaxed">
+                      We sent a verification code to <br/>
+                      <span className="text-white font-bold">{regData.email}</span>
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <input 
+                      type="text" 
+                      maxLength="6" 
+                      placeholder="••••••" 
+                      required 
+                      className="w-full bg-[#060813]/80 border border-white/10 rounded-xl px-4 py-5 text-white text-3xl text-center tracking-[0.5em] font-mono outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner" 
+                      onChange={(e) => setVerificationCode(e.target.value)} 
+                    />
+                  </div>
+                  
+                  <button type="submit" className="w-full bg-gradient-to-r from-[#6d28d9] to-[#3b82f6] text-white font-bold py-4 rounded-xl shadow-[0_4px_15px_rgba(109,40,217,0.3)] hover:shadow-[0_6px_20px_rgba(109,40,217,0.5)] transition-all active:scale-[0.98] mt-4">
+                    Verify & Enter
+                  </button>
+
+                  <div className="text-center pt-2">
+                    <button type="button" onClick={() => setView('login')} className="text-[#a19bfe] text-xs font-bold hover:text-white transition-colors">
+                      Back to Sign In
+                    </button>
+                  </div>
+                </form>
+              ) : view === 'login' ? (
+
+                /* ФОРМА ЛОГІНУ */
                 <form onSubmit={handleLoginSubmit} className="space-y-5">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
-                    <input 
+                    <input
                       type="email" placeholder="name@company.com" required
                       className="w-full bg-[#060813]/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner"
                       onChange={(e) => setLoginData({...loginData, email: e.target.value})}
                     />
                   </div>
-                  
+                 
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Password</label>
-                    <input 
+                    <input
                       type="password" placeholder="••••••••" required
                       className="w-full bg-[#060813]/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner"
                       onChange={(e) => setLoginData({...loginData, password: e.target.value})}
@@ -235,19 +314,21 @@ export default function Login({ onLoginSuccess }) {
                   </button>
                 </form>
               ) : (
+
+                /* ФОРМА РЕЄСТРАЦІЇ */
                 <form onSubmit={handleRegisterSubmit} className="space-y-5">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
-                    <input 
+                    <input
                       type="text" placeholder="Enter your full name" required
                       className="w-full bg-[#060813]/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner"
                       onChange={(e) => setRegData({...regData, full_name: e.target.value})}
                     />
                   </div>
-                  
+                 
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
-                    <input 
+                    <input
                       type="email" placeholder="name@company.com" required
                       className="w-full bg-[#060813]/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner"
                       onChange={(e) => setRegData({...regData, email: e.target.value})}
@@ -256,7 +337,7 @@ export default function Login({ onLoginSuccess }) {
 
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Password</label>
-                    <input 
+                    <input
                       type="password" placeholder="Create a strong password" required
                       className="w-full bg-[#060813]/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner"
                       onChange={(e) => setRegData({...regData, password: e.target.value})}
