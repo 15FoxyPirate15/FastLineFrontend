@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Loader from './Loader';
-import { ShieldCheck, Users, Kanban, Zap, MailCheck } from 'lucide-react';
+import { ShieldCheck, Users, Kanban, Zap } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 const getFriendlyErrorMessage = (errorMsg) => {
@@ -10,17 +10,17 @@ const getFriendlyErrorMessage = (errorMsg) => {
   if (msg.includes('INVALID_LOGIN_CREDENTIALS') || msg.includes('WRONG-PASSWORD') || msg.includes('USER-NOT-FOUND')) {
     return "Invalid email or password. Please try again.";
   }
-  if (msg.includes('EMAIL-ALREADY-IN-USE') || msg.includes('EXISTS')) {
+  if (msg.includes('EMAIL-ALREADY-IN-USE') || msg.includes('EXISTS') || msg.includes('ALREADY IN USE')) {
     return "This email is already registered. Please sign in.";
   }
-  if (msg.includes('WEAK-PASSWORD')) {
+  if (msg.includes('WEAK-PASSWORD') || msg.includes('SHORT')) {
     return "Password is too weak. Use at least 6 characters.";
   }
-  if (msg.includes('INVALID-EMAIL')) {
+  if (msg.includes('INVALID-EMAIL') || msg.includes('INVALID EMAIL')) {
     return "Please enter a valid email address.";
   }
  
-  return "Authentication failed. Please try again.";
+  return errorMsg; 
 };
 
 const AnimatedLinesBackground = () => {
@@ -70,15 +70,12 @@ const AnimatedLinesBackground = () => {
 const DefinitionSide = () => (
   <div className="flex flex-col gap-10 text-white z-10 relative">
     <div className="space-y-4">
-      {/* Логотип і назва: з'являються першими (delay-150) */}
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-6 duration-700 delay-150 fill-mode-backwards">
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#6d28d9] to-[#3b82f6] flex items-center justify-center shadow-[0_0_20px_rgba(109,40,217,0.4)]">
           <Zap size={24} className="text-white" />
         </div>
         <h1 className="text-4xl font-black tracking-tight">FastLine</h1>
       </div>
-      
-      {/* Підзаголовок: з'являється другим (delay-300) */}
       <p className="text-[#a19bfe] text-lg max-w-md leading-relaxed font-medium animate-in fade-in slide-in-from-left-6 duration-700 delay-300 fill-mode-backwards">
         Your secure workspace for team collaboration, project management, and professional communication.
       </p>
@@ -90,7 +87,6 @@ const DefinitionSide = () => (
         { Icon: Users, title: "Real-time collaboration", desc: "Work together seamlessly with your team in real-time.", color: "text-[#3b82f6]", delay: "delay-[600ms]" },
         { Icon: Kanban, title: "Project management tools", desc: "Organize tasks, schedule meetings, and track progress.", color: "text-[#ec4899]", delay: "delay-[750ms]" }
       ].map((item, i) => (
-        // Іконки з описом: виїжджають по черзі
         <div key={i} className={`flex gap-4 group animate-in fade-in slide-in-from-left-4 duration-700 fill-mode-backwards ${item.delay}`}>
           <div className="mt-1"><item.Icon size={26} className={`${item.color} group-hover:scale-110 transition-all`} /></div>
           <div>
@@ -104,15 +100,15 @@ const DefinitionSide = () => (
 );
 
 export default function Login({ onLoginSuccess }) {
-  const [view, setView] = useState('login'); // 'login' | 'register' | 'verify'
+  const [view, setView] = useState('login'); 
   const [isLoading, setIsLoading] = useState(false);
  
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [regData, setRegData] = useState({ full_name: '', email: '', password: '' });
-  const [verificationCode, setVerificationCode] = useState('');
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading) return;
     setIsLoading(true);
     try {
       const response = await fetch('https://backendfastline.onrender.com/auth/login', {
@@ -140,6 +136,7 @@ export default function Login({ onLoginSuccess }) {
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading) return; 
     setIsLoading(true);
     try {
       const response = await fetch('https://backendfastline.onrender.com/auth/register', {
@@ -152,56 +149,22 @@ export default function Login({ onLoginSuccess }) {
       try { data = await response.json(); } catch (e) {}
 
       if (response.ok) {
+        setRegData({ full_name: '', email: '', password: '' });
+
         setTimeout(() => {
           setIsLoading(false);
-          toast.success("Code sent to your email!", { style: { background: '#1e1b2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }});
-          setView('verify'); // Перемикаємо на вікно вводу коду
+          toast.success("Account created successfully! Please sign in.", { style: { background: '#1e1b2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }});
+          setView('login');
         }, 1000);
       } else {
         setIsLoading(false);
-        toast.error(getFriendlyErrorMessage(data.message || "Registration error"), { style: { background: '#1e1b2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }});
-      }
-    } catch (err) {
-      setIsLoading(false);
-      toast.error("Server connection error. Please try again.", { style: { background: '#1e1b2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }});
-    }
-  };
-
-  const handleVerifySubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      const response = await fetch('https://backendfastline.onrender.com/auth/verify', { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: regData.email, code: verificationCode }),
-      });
-
-      if (response.ok) {
-        toast.success("Email verified!", { style: { background: '#1e1b2e', color: '#fff' }});
+        const errorMsg = getFriendlyErrorMessage(data.message || "Registration error");
+        toast.error(errorMsg, { style: { background: '#1e1b2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }});
         
-        // Автоматичний логін одразу після успішного підтвердження
-        const loginRes = await fetch('https://backendfastline.onrender.com/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: regData.email, password: regData.password })
-        });
-        
-        const loginData = await loginRes.json();
-        
-        if (loginRes.ok) {
-          localStorage.setItem('token', loginData.token);
-          if (loginData.user) localStorage.setItem('user', JSON.stringify(loginData.user)); 
-          setTimeout(() => { setIsLoading(false); if (onLoginSuccess) onLoginSuccess(loginData.user); }, 1000);
-        } else {
-          setIsLoading(false);
+        if (errorMsg.includes("already registered")) {
+          setRegData({ full_name: '', email: '', password: '' });
           setView('login');
         }
-
-      } else {
-        setIsLoading(false);
-        toast.error("Invalid verification code.", { style: { background: '#1e1b2e', color: '#fff' }});
       }
     } catch (err) {
       setIsLoading(false);
@@ -213,7 +176,7 @@ export default function Login({ onLoginSuccess }) {
     <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-[#030408]">
      
       <Toaster position="top-center" />
-      {isLoading && <Loader title={view === 'verify' ? "Verifying..." : view === 'login' ? "Signing in..." : "Creating account..."} subtitle="Please wait..." />}
+      {isLoading && <Loader title={view === 'login' ? "Signing in..." : "Creating account..."} subtitle="Please wait..." />}
 
       <AnimatedLinesBackground />
 
@@ -222,76 +185,39 @@ export default function Login({ onLoginSuccess }) {
         <DefinitionSide />
        
         <div className="flex justify-center lg:justify-end">
-         
-          {/* Вікно форми з анімацією затримки (delay-500) */}
           <div className="w-full max-w-[420px] bg-[#101426]/70 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] relative overflow-hidden animate-in fade-in slide-in-from-bottom-12 duration-700 delay-500 fill-mode-backwards">
            
-            {/* TOGGLE (Ховається під час верифікації) */}
-            {view !== 'verify' && (
-              <div className="flex bg-[#060813] p-1.5 rounded-xl mb-8 border border-white/5 shadow-inner relative z-10">
-                <button
-                  type="button"
-                  onClick={() => setView('login')}
-                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 ${view === 'login' ? 'bg-[#6d28d9] text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}`}
-                >
-                  Sign In
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setView('register')}
-                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 ${view === 'register' ? 'bg-[#6d28d9] text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}`}
-                >
-                  Register
-                </button>
-              </div>
-            )}
+            <div className="flex bg-[#060813] p-1.5 rounded-xl mb-8 border border-white/5 shadow-inner relative z-10">
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={() => setView('login')}
+                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 disabled:opacity-50 ${view === 'login' ? 'bg-[#6d28d9] text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={() => setView('register')}
+                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-300 disabled:opacity-50 ${view === 'register' ? 'bg-[#6d28d9] text-white shadow-md' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                Register
+              </button>
+            </div>
 
             <div key={view} className="animate-in fade-in slide-in-from-left-2 duration-300 relative z-10">
              
-              {/* ФОРМА ВЕРИФІКАЦІЇ КОДУ */}
-              {view === 'verify' ? (
-                <form onSubmit={handleVerifySubmit} className="space-y-6">
-                  <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-[#6d28d9]/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#6d28d9]/50">
-                      <MailCheck size={28} className="text-[#a19bfe]" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-white tracking-tight">Check your email</h3>
-                    <p className="text-gray-400 text-sm mt-2 leading-relaxed">
-                      We sent a verification code to <br/>
-                      <span className="text-white font-bold">{regData.email}</span>
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <input 
-                      type="text" 
-                      maxLength="6" 
-                      placeholder="••••••" 
-                      required 
-                      className="w-full bg-[#060813]/80 border border-white/10 rounded-xl px-4 py-5 text-white text-3xl text-center tracking-[0.5em] font-mono outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner" 
-                      onChange={(e) => setVerificationCode(e.target.value)} 
-                    />
-                  </div>
-                  
-                  <button type="submit" className="w-full bg-gradient-to-r from-[#6d28d9] to-[#3b82f6] text-white font-bold py-4 rounded-xl shadow-[0_4px_15px_rgba(109,40,217,0.3)] hover:shadow-[0_6px_20px_rgba(109,40,217,0.5)] transition-all active:scale-[0.98] mt-4">
-                    Verify & Enter
-                  </button>
-
-                  <div className="text-center pt-2">
-                    <button type="button" onClick={() => setView('login')} className="text-[#a19bfe] text-xs font-bold hover:text-white transition-colors">
-                      Back to Sign In
-                    </button>
-                  </div>
-                </form>
-              ) : view === 'login' ? (
-
+              {view === 'login' ? (
                 /* ФОРМА ЛОГІНУ */
                 <form onSubmit={handleLoginSubmit} className="space-y-5">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
                     <input
                       type="email" placeholder="name@company.com" required
-                      className="w-full bg-[#060813]/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner"
+                      value={loginData.email}
+                      disabled={isLoading}
+                      className="w-full bg-[#060813]/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner disabled:opacity-50"
                       onChange={(e) => setLoginData({...loginData, email: e.target.value})}
                     />
                   </div>
@@ -300,7 +226,9 @@ export default function Login({ onLoginSuccess }) {
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Password</label>
                     <input
                       type="password" placeholder="••••••••" required
-                      className="w-full bg-[#060813]/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner"
+                      value={loginData.password}
+                      disabled={isLoading}
+                      className="w-full bg-[#060813]/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner disabled:opacity-50"
                       onChange={(e) => setLoginData({...loginData, password: e.target.value})}
                     />
                   </div>
@@ -309,19 +237,20 @@ export default function Login({ onLoginSuccess }) {
                     <a href="#" className="text-xs font-bold text-[#a19bfe] hover:text-white transition-colors">Forgot password?</a>
                   </div>
 
-                  <button type="submit" className="w-full bg-gradient-to-r from-[#6d28d9] to-[#5b21b6] text-white font-bold text-sm py-3.5 rounded-xl shadow-[0_4px_15px_rgba(109,40,217,0.3)] hover:shadow-[0_6px_20px_rgba(109,40,217,0.5)] transition-all active:scale-[0.98] mt-2">
-                    Login securely
+                  <button disabled={isLoading} type="submit" className="w-full bg-gradient-to-r from-[#6d28d9] to-[#5b21b6] text-white font-bold text-sm py-3.5 rounded-xl shadow-[0_4px_15px_rgba(109,40,217,0.3)] hover:shadow-[0_6px_20px_rgba(109,40,217,0.5)] transition-all active:scale-[0.98] mt-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                    {isLoading ? "Processing..." : "Login securely"}
                   </button>
                 </form>
               ) : (
-
                 /* ФОРМА РЕЄСТРАЦІЇ */
                 <form onSubmit={handleRegisterSubmit} className="space-y-5">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
                     <input
                       type="text" placeholder="Enter your full name" required
-                      className="w-full bg-[#060813]/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner"
+                      value={regData.full_name}
+                      disabled={isLoading}
+                      className="w-full bg-[#060813]/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner disabled:opacity-50"
                       onChange={(e) => setRegData({...regData, full_name: e.target.value})}
                     />
                   </div>
@@ -330,7 +259,9 @@ export default function Login({ onLoginSuccess }) {
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
                     <input
                       type="email" placeholder="name@company.com" required
-                      className="w-full bg-[#060813]/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner"
+                      value={regData.email}
+                      disabled={isLoading}
+                      className="w-full bg-[#060813]/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner disabled:opacity-50"
                       onChange={(e) => setRegData({...regData, email: e.target.value})}
                     />
                   </div>
@@ -339,20 +270,22 @@ export default function Login({ onLoginSuccess }) {
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Password</label>
                     <input
                       type="password" placeholder="Create a strong password" required
-                      className="w-full bg-[#060813]/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner"
+                      value={regData.password}
+                      disabled={isLoading}
+                      className="w-full bg-[#060813]/50 border border-white/10 rounded-xl px-4 py-3.5 text-white text-sm outline-none focus:border-[#6d28d9] focus:ring-1 focus:ring-[#6d28d9] transition-all shadow-inner disabled:opacity-50"
                       onChange={(e) => setRegData({...regData, password: e.target.value})}
                     />
                   </div>
 
                   <div className="flex items-start gap-3 pt-2">
-                    <input type="checkbox" id="terms" className="mt-1 w-4 h-4 rounded bg-[#060813] border-gray-600 text-[#6d28d9] focus:ring-[#6d28d9] cursor-pointer" required/>
+                    <input type="checkbox" disabled={isLoading} id="terms" className="mt-1 w-4 h-4 rounded bg-[#060813] border-gray-600 text-[#6d28d9] focus:ring-[#6d28d9] cursor-pointer disabled:opacity-50" required/>
                     <label htmlFor="terms" className="text-xs text-gray-400 leading-relaxed cursor-pointer relative z-20">
                       I agree to the <a href="#" className="text-[#a19bfe] font-bold hover:text-white transition-colors relative z-30">Terms of Service</a> and <a href="#" className="text-[#a19bfe] font-bold hover:text-white transition-colors relative z-30">Privacy Policy</a>
                     </label>
                   </div>
 
-                  <button type="submit" className="w-full bg-gradient-to-r from-[#6d28d9] to-[#5b21b6] text-white font-bold text-sm py-3.5 rounded-xl shadow-[0_4px_15px_rgba(109,40,217,0.3)] hover:shadow-[0_6px_20px_rgba(109,40,217,0.5)] transition-all active:scale-[0.98] mt-2 relative z-20">
-                    Create Account
+                  <button disabled={isLoading} type="submit" className="w-full bg-gradient-to-r from-[#6d28d9] to-[#5b21b6] text-white font-bold text-sm py-3.5 rounded-xl shadow-[0_4px_15px_rgba(109,40,217,0.3)] hover:shadow-[0_6px_20px_rgba(109,40,217,0.5)] transition-all active:scale-[0.98] mt-2 relative z-20 disabled:opacity-70 disabled:cursor-not-allowed">
+                    {isLoading ? "Processing..." : "Create Account"}
                   </button>
                 </form>
               )}
