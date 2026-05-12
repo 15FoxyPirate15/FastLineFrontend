@@ -6,9 +6,11 @@ import ChatArea from './components/ChatArea';
 import EditProfile from './components/EditProfile';
 import GroupChatArea from './components/GroupChatArea';
 import QuickNav from './components/QuickNav';
+import ProjectsPage from './components/ProjectsPage';
 import CreateGroupModal from './components/CreateGroupModal';
 import Loader from './components/Loader';
 import ContactsPage from './components/ContactsPage';
+import ProjectDetailsPage from './components/ProjectDetailsPage';
 
 import TasksPage from './components/TasksPage';
 import CalendarPage from './components/CalendarPage';
@@ -150,6 +152,8 @@ function App() {
       case 'calls': return <CallsPage onNavigate={setActiveView} />;
       case 'contacts': return <ContactsPage onNavigate={setActiveView} onStartChat={(user) => { setSelectedChatUser(user); setActiveView('chat_direct'); }} />;
       case 'meetings': return <MeetingsPage onNavigate={setActiveView} />;
+      case 'projects': return <ProjectsPage onNavigate={setActiveView} />;
+      case 'project_details': return <ProjectDetailsPage onNavigate={setActiveView} />;
       default: return <div className="relative h-full flex flex-col"><WelcomeScreen onNavigate={setActiveView} /></div>;
     }
   };

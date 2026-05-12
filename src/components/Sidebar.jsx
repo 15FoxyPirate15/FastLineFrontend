@@ -242,13 +242,17 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
             
             {/* PROJECTS */}
             <div>
-              <div className="flex items-center gap-2 text-[10px] font-black text-[#a19bfe] uppercase tracking-[0.2em] mb-3 opacity-60">
+              {/* Додано cursor-pointer та onClick */}
+              <div 
+                onClick={() => handleNavigation('projects')}
+                className="flex items-center gap-2 text-[10px] font-black text-[#a19bfe] uppercase tracking-[0.2em] mb-3 opacity-60 cursor-pointer hover:opacity-100 transition-opacity"
+              >
                 <FolderKanban size={12} /> <span>Active Projects</span>
               </div>
               <div className="space-y-1">
                 {projects.length === 0 ? (
-                    <div className="py-2 text-[11px] text-gray-500 italic">
-                        No active projects yet.
+                    <div className="py-2 text-[11px] text-gray-500 italic bg-transparent">
+                       {/* Фон прибрано, як ви і просили */}
                     </div>
                 ) : (
                     projects.map((proj, idx) => ( <div key={idx} /> ))
