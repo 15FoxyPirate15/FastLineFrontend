@@ -1,29 +1,37 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Settings, LogOut, FolderKanban, MessageSquare, Plus, Users, Hash } from 'lucide-react';
+import { Search, Settings, LogOut, FolderKanban, MessageSquare, Plus, Users, Hash, Contact, UserPlus, Zap } from 'lucide-react';
 
-// Додано пропс onCreateGroupClick
 const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartChat, onStartGroupChat, refreshTrigger, onCreateGroupClick }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [isSearchMode, setIsSearchMode] = useState(false); 
   
-  // ОСЬ ЦІ РЯДКИ:
   const [directChats, setDirectChats] = useState([]);
   const [groupChats, setGroupChats] = useState([]);
   const [isLoadingChats, setIsLoadingChats] = useState(true);
-  
-  const searchContainerRef = useRef(null);
-  
-  const projects = [
-    { name: "Maxim Project", subtitle: "Orest: Max, go pit piva...", time: "13:45", img: "M" },
-    { name: "Stanislav Project", subtitle: "Foxy Pirate: Kogda tu sdelaesh...", time: "just now", img: "S" }
-  ];
+  const [projects, setProjects] = useState([]); 
+
+  const sidebarRef = useRef(null);
+
+  // Функція закриття пошуку
+  const cancelSearch = () => {
+    setIsSearchMode(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  // Обертка для навігації, щоб закривати пошук при переході на іншу сторінку
+  const handleNavigation = (path) => {
+    cancelSearch();
+    onNavigate(path);
+  };
 
   useEffect(() => {
+    // Слухач для кліків за межами сайдбару
     const handleClickOutside = (event) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target)) {
-        setShowDropdown(false);
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
+        cancelSearch();
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -35,7 +43,6 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
     setSearchQuery(query);
 
     if (query.trim().length > 0) {
-      setShowDropdown(true);
       setIsSearching(true);
       try {
         const token = localStorage.getItem('token');
@@ -51,10 +58,9 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
       } catch (error) {
         setSearchResults([]);
       } finally {
-        setTimeout(() => setIsSearching(false), 500);
+        setTimeout(() => setIsSearching(false), 400); 
       }
     } else {
-      setShowDropdown(false);
       setSearchResults([]);
     }
   };
@@ -70,7 +76,6 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
             if (!res.ok) return;
             
             const data = await res.json();
-            console.log("ДАНІ З БЕКЕНДУ:", data); // Тепер воно на правильному місці!
             
             if (Array.isArray(data)) {
                 const dChats = [];
@@ -84,25 +89,22 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
                         timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     }
 
-                    // РОЗПОДІЛ ЗА ТИПОМ (Групи йдуть в gChats, Приватні в dChats)
                     if (chat.type === 'group' || chat.type === 'project') {
-                        gChats.push({
-                            id: chat.id,
-                            name: chat.name || "Unnamed Group",
-                            subtitle: chat.lastMessage?.text || "No messages yet",
-                            time: timeString
-                        });
+                        gChats.push({ id: chat.id, name: chat.name || "Unnamed Group", subtitle: chat.lastMessage?.text || "No messages yet", time: timeString });
                     } else {
                         let otherUserEmail = "Unknown User";
                         if (chat.participants && Array.isArray(chat.participants)) {
                             otherUserEmail = chat.participants.find(email => email !== currentUser.email) || chat.participants[0];
                         }
-                        dChats.push({
-                            id: chat.id,
-                            name: chat.name || otherUserEmail.split('@')[0],
-                            email: otherUserEmail,
-                            subtitle: chat.lastMessage?.text || "No messages yet",
-                            time: timeString
+                        
+                        const chatName = chat.name || chat.full_name || otherUserEmail.split('@')[0];
+                        
+                        dChats.push({ 
+                            id: chat.id, 
+                            name: chatName, 
+                            email: otherUserEmail, 
+                            subtitle: chat.lastMessage?.text || "No messages yet", 
+                            time: timeString 
                         });
                     }
                 });
@@ -120,23 +122,12 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
     fetchMyChats();
   }, [currentUser, refreshTrigger]);
 
-  const UserSkeleton = () => (
-    <div className="flex items-center gap-3 px-4 py-2 animate-pulse">
-      <div className="w-8 h-8 rounded-full bg-white/10 shrink-0"></div>
-      <div className="flex-1 space-y-2 min-w-0">
-        <div className="h-3 bg-white/10 rounded w-3/4"></div>
-        <div className="h-2 bg-purple-500/10 rounded w-1/2"></div>
-      </div>
-    </div>
-  );
-
   const ChatSkeleton = () => (
-    <div className="flex items-center gap-3 p-2 rounded-xl animate-pulse">
-      <div className="w-10 h-10 rounded-full bg-[#8b5cf6]/20 shrink-0 border border-white/5"></div>
+    <div className="flex items-center gap-3 p-3 rounded-2xl animate-pulse">
+      <div className="w-10 h-10 rounded-xl bg-white/5 shrink-0 border border-white/5"></div>
       <div className="flex-1 space-y-2.5">
         <div className="flex justify-between">
             <div className="h-3 bg-white/10 rounded w-1/2"></div>
-            <div className="h-2 bg-white/5 rounded w-1/6 mt-1"></div>
         </div>
         <div className="h-2 bg-white/5 rounded w-3/4"></div>
       </div>
@@ -144,228 +135,199 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
   );
 
   return (
-    <div className="w-80 bg-[#171635]/95 backdrop-blur-xl flex flex-col h-screen border-r border-white/5 border-t border-t-white/10 font-sans relative z-20">
+    <div ref={sidebarRef} className="w-[320px] bg-[#05060f]/95 backdrop-blur-3xl flex flex-col h-screen border-r border-white/5 font-sans relative z-20 shadow-[10px_0_40px_rgba(0,0,0,0.5)]">
       
       <style>
         {`
-          .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+          .custom-scrollbar::-webkit-scrollbar { width: 4px; }
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
           .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(255, 255, 255, 0.1); border-radius: 10px; }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.2); }
-          
-          .ripple-effect {
-            position: relative;
-            overflow: hidden;
-          }
-          .ripple-effect::after {
-            content: "";
-            display: block;
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
-            background-repeat: no-repeat;
-            background-position: 50%;
-            transform: scale(10, 10);
-            opacity: 0;
-            transition: transform .5s, opacity 1s;
-          }
-          .ripple-effect:active::after {
-            transform: scale(0, 0);
-            opacity: .15;
-            transition: 0s;
-          }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(139, 92, 246, 0.5); }
         `}
       </style>
 
-      <div className="px-6 pt-6 pb-4 cursor-pointer" onClick={() => onNavigate('welcome')}>
-        <h1 className="text-white text-2xl font-semibold tracking-tight">Fast<span className="text-[#8b5cf6]">Line</span></h1>
+      {/* HEADER */}
+      <div className="px-6 pt-8 pb-6 flex justify-between items-center relative z-30">
+        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => handleNavigation('welcome')}>
+            <div className="w-8 h-8 bg-gradient-to-tr from-[#6d28d9] to-[#3b82f6] rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(109,40,217,0.5)] group-hover:scale-110 transition-transform">
+                <Zap size={18} className="text-white" />
+            </div>
+            <h1 className="text-white text-2xl font-black tracking-tighter">Fast<span className="text-[#a19bfe]">Line</span></h1>
+        </div>
+        
+        <button 
+          onClick={() => handleNavigation('contacts')} 
+          className="p-2.5 bg-[#101426] hover:bg-[#1a1f3c] border border-white/5 hover:border-[#6d28d9]/50 rounded-xl text-[#a19bfe] hover:text-white transition-all shadow-inner group"
+          title="Contacts"
+        >
+          <Contact size={18} className="group-hover:scale-110 transition-transform" />
+        </button>
       </div>
 
-      <div className="px-6 pb-4 relative z-50" ref={searchContainerRef}>
-        <div className="bg-[#0c1021] flex items-center px-3 py-2.5 rounded-xl border border-white/5 focus-within:ring-2 focus-within:ring-[#8b5cf6]/50 focus-within:border-[#8b5cf6]/50 focus-within:shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all duration-300">
-          <Search size={18} className="text-[#a19bfe] mr-3" />
+      {/* SEARCH BAR (Кнопку Cancel видалено) */}
+      <div className="px-6 pb-6 flex gap-3 items-center relative z-30">
+        <div className="flex-1 bg-[#101426] flex items-center px-4 py-3.5 rounded-2xl border border-white/5 focus-within:border-[#6d28d9]/50 focus-within:ring-4 focus-within:ring-[#6d28d9]/10 transition-all duration-300 shadow-inner">
+          <Search size={18} className="text-[#a19bfe] mr-3 shrink-0" />
           <input 
             type="text" 
             placeholder="Search users..." 
             value={searchQuery}
             onChange={handleSearch}
-            className="bg-transparent border-none outline-none text-sm text-gray-200 w-full placeholder-gray-600" 
+            onFocus={() => setIsSearchMode(true)}
+            className="bg-transparent border-none outline-none text-sm text-gray-200 w-full placeholder-gray-600 font-medium" 
           />
         </div>
+      </div>
 
-        {showDropdown && (
-          <div className="absolute left-6 right-6 top-full mt-2 bg-[#1d1a4a]/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto custom-scrollbar z-50 animate-in fade-in zoom-in-95 duration-200">
+      {/* CONTENT AREA */}
+      <div className="flex-1 relative overflow-hidden">
+        
+        {isSearchMode ? (
+          /* РЕЖИМ ПОШУКУ */
+          <div 
+            key="search-view" 
+            className="absolute inset-0 overflow-y-auto custom-scrollbar px-6 animate-in fade-in slide-in-from-right-8 duration-300 cursor-default"
+            onClick={cancelSearch} /* Клік по порожньому місцю закриває пошук */
+          >
+            <div className="text-[10px] font-black text-[#a19bfe] uppercase tracking-[0.2em] mb-4 opacity-60">Global Search</div>
+            
             {isSearching ? (
-              <div className="py-2 space-y-1"><UserSkeleton /><UserSkeleton /></div>
+               <div className="p-6 flex justify-center"><div className="w-6 h-6 border-2 border-[#6d28d9] border-t-transparent rounded-full animate-spin"></div></div>
             ) : searchResults.length > 0 ? (
-              <div className="py-2">
-                {(searchResults || []).map((user, idx) => (
-                  <div 
-                    key={idx} 
-                    className="ripple-effect flex items-center gap-3 px-4 py-2 hover:bg-[#8b5cf6]/10 cursor-pointer transition-colors" 
-                    onClick={() => {
-                      setShowDropdown(false);
-                      setSearchQuery('');
-                      if (onStartChat) onStartChat(user);
-                    }}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                      {user.avatarUrl && user.avatarUrl !== 'none' ? (
-                        <img src={user.avatarUrl} alt="avatar" className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        user.displayName?.[0]?.toUpperCase() || user.name?.[0]?.toUpperCase() || '?'
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-200 truncate">{user.displayName || user.name || "User"}</div>
-                      <div className="text-[11px] text-[#8b5cf6] truncate">{user.tag || `@${user.email?.split('@')[0] || 'user'}`}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+               <div className="space-y-2">
+                 {searchResults.map((user, idx) => {
+                   const displayName = user.full_name || user.displayName || user.name || user.email?.split('@')[0] || "Unknown User";
+                   const avatarImage = user.avatarUrl || user.photoURL || user.avatar;
+
+                   return (
+                     <div 
+                       key={user.id || idx} 
+                       className="flex items-center gap-3 p-3 bg-[#101426]/50 hover:bg-[#6d28d9]/20 rounded-2xl border border-white/5 hover:border-[#6d28d9]/30 cursor-pointer transition-all group" 
+                       onClick={(e) => { 
+                          e.stopPropagation(); // Зупиняємо клік, щоб не спрацював onClick на батьківському div
+                          cancelSearch(); 
+                          onStartChat({...user, name: displayName}); 
+                       }}
+                     >
+                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#6d28d9] to-[#3b82f6] flex items-center justify-center text-white font-bold shadow-md overflow-hidden shrink-0">
+                         {avatarImage && avatarImage !== 'none' ? (
+                            <img src={avatarImage} className="w-full h-full object-cover" alt="avatar" />
+                         ) : (
+                            displayName[0]?.toUpperCase()
+                         )}
+                       </div>
+                       <div className="flex-1 min-w-0">
+                         <div className="text-sm font-bold text-white group-hover:text-[#a19bfe] transition-colors truncate">
+                            {displayName}
+                         </div>
+                         <div className="text-[11px] text-gray-400 truncate">
+                            {user.email || "No email"}
+                         </div>
+                       </div>
+                       <UserPlus size={16} className="text-gray-500 group-hover:text-white opacity-0 group-hover:opacity-100 transition-all shrink-0" />
+                     </div>
+                   );
+                 })}
+               </div>
+            ) : searchQuery.length > 0 ? (
+               <div className="p-8 text-center text-gray-500 text-sm italic border border-dashed border-white/5 rounded-2xl">No users found</div>
             ) : (
-              <div className="p-4 text-center text-sm text-gray-500">No users found</div>
+               <div className="p-8 text-center text-gray-500 text-sm italic">Type to start searching...</div>
             )}
+          </div>
+        ) : (
+          
+          /* СТАНДАРТНИЙ САЙДБАР */
+          <div key="normal-view" className="absolute inset-0 overflow-y-auto custom-scrollbar px-6 space-y-8 animate-in fade-in slide-in-from-left-8 duration-300">
+            
+            {/* PROJECTS */}
+            <div>
+              <div className="flex items-center gap-2 text-[10px] font-black text-[#a19bfe] uppercase tracking-[0.2em] mb-3 opacity-60">
+                <FolderKanban size={12} /> <span>Active Projects</span>
+              </div>
+              <div className="space-y-1">
+                {projects.length === 0 ? (
+                    <div className="py-2 text-[11px] text-gray-500 italic">
+                        No active projects yet.
+                    </div>
+                ) : (
+                    projects.map((proj, idx) => ( <div key={idx} /> ))
+                )}
+              </div>
+            </div>
+
+            {/* GROUPS */}
+            <div>
+              <div className="flex items-center justify-between text-[10px] text-[#a19bfe] font-black uppercase tracking-[0.2em] mb-3 opacity-60">
+                <div className="flex items-center gap-2"><Users size={12} /> <span>Groups</span></div>
+                <Plus onClick={onCreateGroupClick} size={14} className="cursor-pointer hover:text-white transition-colors" />
+              </div>
+              <div className="space-y-1">
+                {isLoadingChats ? ( <ChatSkeleton /> ) : (
+                  groupChats.map((group) => (
+                    <div key={group.id} onClick={() => onStartGroupChat(group)} className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-white/5 cursor-pointer transition-all border border-transparent hover:border-white/5">
+                      <div className="w-10 h-10 rounded-xl bg-[#1e2336] flex items-center justify-center text-[#a19bfe] border border-white/5 group-hover:border-[#6d28d9]/50 transition-all shrink-0">
+                          <Hash size={20} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-gray-200 text-sm font-bold truncate group-hover:text-white pr-2">{group.name}</span>
+                          <span className="text-[10px] text-gray-600 shrink-0">{group.time}</span>
+                        </div>
+                        <div className="text-[11px] text-gray-500 truncate group-hover:text-gray-400 transition">{group.subtitle}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* DIRECT MESSAGES */}
+            <div>
+              <div className="flex items-center gap-2 text-[10px] text-[#a19bfe] font-black uppercase tracking-[0.2em] mb-3 opacity-60">
+                <MessageSquare size={12} /> <span>Messages</span>
+              </div>
+              <div className="space-y-1">
+                {isLoadingChats ? ( <><ChatSkeleton /><ChatSkeleton /></> ) : (
+                  directChats.map((msg) => {
+                    const initial = msg.name?.[0]?.toUpperCase() || msg.email?.[0]?.toUpperCase() || '?';
+                    return (
+                      <div key={msg.id} onClick={() => onStartChat({ email: msg.email, name: msg.name, id: msg.id })} className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-white/5 cursor-pointer transition-all border border-transparent hover:border-white/5">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#1e2336] to-[#0a0b1e] border border-white/10 flex items-center justify-center text-white text-xs font-bold group-hover:shadow-[0_0_15px_rgba(109,40,217,0.3)] transition-all shrink-0">
+                          {msg.img || initial}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-baseline">
+                            <span className="text-gray-200 text-sm font-bold truncate group-hover:text-white pr-2">{msg.name}</span>
+                            <span className="text-[10px] text-gray-600 shrink-0">{msg.time}</span>
+                          </div>
+                          <div className="text-[11px] text-gray-500 truncate group-hover:text-gray-400 transition">{msg.subtitle}</div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      <div className="h-[1px] bg-white/5 w-full mb-4"></div>
-
-      <div className="flex-1 overflow-y-auto px-6 space-y-8 custom-scrollbar pr-2">
-        
-        {/* PROJECTS */}
-        <div>
-          <div className="flex items-center gap-2 text-[11px] font-bold text-[#a19bfe] uppercase tracking-widest mb-4 opacity-80">
-            <FolderKanban size={12} /> <span>Projects</span>
-          </div>
-          <div className="space-y-1">
-            {projects.map((proj, idx) => (
-              <div key={idx} className="ripple-effect group flex items-center gap-3 p-2 rounded-xl hover:bg-[#8b5cf6]/10 hover:border-[#8b5cf6]/20 border border-transparent cursor-pointer transition-all">
-                <div className="w-10 h-10 rounded-full bg-[#1e2336] border border-white/10 flex items-center justify-center text-white font-medium text-sm group-hover:border-[#8b5cf6]/50 transition-colors">{proj.img}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-gray-200 text-sm font-medium truncate group-hover:text-white transition-colors">{proj.name}</span>
-                    <span className="text-[10px] text-gray-600">{proj.time}</span>
-                  </div>
-                  <div className="text-[11px] text-gray-500 truncate group-hover:text-gray-400 transition">{proj.subtitle}</div>
-                </div>
+      {/* FOOTER */}
+      <div className="p-6 pt-4 relative z-30">
+          <div className="bg-[#101426] border border-white/5 rounded-[2rem] p-3 flex items-center gap-3 shadow-2xl hover:border-[#6d28d9]/30 transition-colors">
+            <div className="relative" onClick={onProfileClick}>
+              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-[#6d28d9]/50 cursor-pointer hover:scale-105 transition-transform bg-[#1e2336] shrink-0">
+                {currentUser?.avatar ? <img src={currentUser.avatar} className="w-full h-full object-cover"/> : <div className="w-full h-full bg-gradient-to-br from-[#6d28d9] to-[#3b82f6] flex items-center justify-center text-white font-bold">{currentUser?.name?.[0]?.toUpperCase() || currentUser?.full_name?.[0]?.toUpperCase() || '?'}</div>}
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* GROUPS */}
-        <div>
-          <div className="flex items-center justify-between text-[11px] text-[#cac7f4] font-bold uppercase tracking-widest mb-4 opacity-80">
-            <div className="flex items-center gap-2"><Users size={12} /> <span>Groups</span></div>
-            <button onClick={onCreateGroupClick} className="p-1 hover:bg-white/10 active:scale-90 rounded-md transition-all text-[#a19bfe] hover:text-white"><Plus size={14} /></button>
-          </div>
-          <div className="space-y-1">
-            {isLoadingChats ? (
-                <ChatSkeleton />
-            ) : (
-                groupChats.map((group) => (
-                  <div 
-                    key={group.id} 
-                    onClick={() => onStartGroupChat(group)} 
-                    className="ripple-effect group flex items-center gap-3 p-2 rounded-xl hover:bg-[#8b5cf6]/10 hover:border-[#8b5cf6]/20 border border-transparent cursor-pointer transition-all"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-500 to-orange-400 flex items-center justify-center text-white text-xs font-bold border-2 border-transparent group-hover:ring-2 ring-[#8b5cf6]/50 transition-all shadow-sm">
-                        <Hash size={18} className="text-white"/>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-baseline">
-                        <span className="text-gray-200 text-sm font-medium truncate group-hover:text-white transition-colors">{group.name}</span>
-                        <span className="text-[10px] text-gray-600">{group.time || "now"}</span>
-                      </div>
-                      <div className="text-[11px] text-[#a19bfe] truncate group-hover:text-purple-300 transition">
-                        {group.subtitle || "Group created"}
-                      </div>
-                    </div>
-                  </div>
-                ))
-            )}
-          </div>
-        </div>
-
-        {/* DIRECT MESSAGES */}
-        <div>
-          <div className="flex items-center gap-2 text-[11px] text-[#cac7f4] font-bold uppercase tracking-widest mb-4 opacity-80">
-            <MessageSquare size={12} /> <span>Direct Messages</span>
-          </div>
-
-          <div className="space-y-1">
-            {isLoadingChats ? (
-                <>
-                    <ChatSkeleton />
-                    <ChatSkeleton />
-                    <ChatSkeleton />
-                </>
-            ) : (
-                directChats.map((msg, idx) => (
-                  <div 
-                    key={msg.id || idx} 
-                    onClick={() => {
-                       if (msg.id && onStartChat) {
-                           onStartChat({ email: msg.email || msg.name, name: msg.name || "User", id: msg.id });
-                       } else {
-                           onNavigate('chat_maxim'); 
-                       }
-                    }} 
-                    className="ripple-effect group flex items-center gap-3 p-2 rounded-xl hover:bg-[#8b5cf6]/10 hover:border-[#8b5cf6]/20 border border-transparent cursor-pointer transition-all"
-                  >
-                    <div className={`w-10 h-10 rounded-full ${msg.color || 'bg-[#1e2336]'} flex items-center justify-center text-white text-xs font-bold border-2 border-transparent group-hover:ring-2 ring-[#8b5cf6]/50 transition-all`}>
-                      {msg.img || msg.name?.[0]?.toUpperCase() || '?'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-baseline">
-                        <span className="text-gray-200 text-sm font-medium truncate group-hover:text-white transition-colors">{msg.name || "User"}</span>
-                        <span className="text-[10px] text-gray-600">{msg.time || "recent"}</span>
-                      </div>
-                      <div className="text-[11px] text-gray-500 truncate group-hover:text-gray-400 transition">
-                        {msg.subtitle || "Chat opened"}
-                      </div>
-                    </div>
-                  </div>
-                ))
-            )}
-          </div>
-        </div>
-
-      </div>
-
-      {/* FOOTER: ПРОФІЛЬ */}
-      <div className="mt-auto pt-4 pb-4 px-4">
-        <div className="h-[1px] bg-white/5 w-full mb-4"></div>
-          {currentUser && (
-            <div className="bg-[#1d1a4a] border border-white/5 border-t-white/10 rounded-2xl p-3 flex items-center gap-3 shadow-lg cursor-pointer hover:border-purple-500/30 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all group">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-full overflow-hidden border-[2px] border-white/20 group-hover:border-[#8b5cf6] transition-colors shadow-sm">
-                {currentUser.avatar ? (
-                  <img src={currentUser.avatar} alt={currentUser.name || "User"} className="w-full h-full object-cover"/>
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white font-bold">
-                    {currentUser.name?.[0]?.toUpperCase() || "?"}
-                  </div>
-                )}
-              </div>
-                <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#1d1a4a] ${currentUser.status === "online" ? "bg-green-500 animate-pulse" : "bg-gray-500"}`}/>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <div className="text-white text-sm font-semibold truncate group-hover:text-purple-300 transition-colors">{currentUser.name || "Unknown User"}</div>
-                <div className="text-[10px] text-[#8b5cf6] font-medium truncate">{currentUser.handle || "@no_tag"}</div>
-              </div>
-              <div className="flex flex-col gap-1 text-gray-500">
-                <Settings onClick={onProfileClick} size={16} className="hover:text-white active:scale-90 transition" />
-                <LogOut onClick={onLogout} size={16} className="hover:text-red-400 active:scale-90 transition" />
-              </div>
+              <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#101426] bg-green-500 shadow-sm" />
             </div>
-          )}
+            <div className="flex-1 min-w-0">
+              <div className="text-white text-sm font-bold truncate">{currentUser?.name || currentUser?.full_name || currentUser?.email?.split('@')[0]}</div>
+              <div className="text-[10px] text-[#a19bfe] font-medium truncate opacity-70">{currentUser?.handle || currentUser?.email}</div>
+            </div>
+            <LogOut onClick={onLogout} size={18} className="text-gray-500 hover:text-red-400 cursor-pointer transition-colors mr-2 shrink-0" />
+          </div>
       </div>
     </div>
   );

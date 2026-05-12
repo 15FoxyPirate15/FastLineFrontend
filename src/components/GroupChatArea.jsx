@@ -11,7 +11,7 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
   const [messages, setMessages] = useState([]);
   const [participants, setParticipants] = useState([]);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
-  const [pinnedMessage, setPinnedMessage] = useState(null); // Стан для закріпленого повідомлення
+  const [pinnedMessage, setPinnedMessage] = useState(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -63,9 +63,6 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
                 setMessages(formattedMessages);
             }
             
-            // Якщо бекенд повертає інфу про закріплене повідомлення в історії (опціонально)
-            // const chatInfoRes = await fetch(`/chats/${roomId}`);
-            // ... setPinnedMessage(chatInfo.pinnedMessage)
         } catch (err) {}
     };
     fetchHistory();
@@ -75,10 +72,30 @@ useEffect(() => {
     if (!socket || !roomId) return;
     socket.emit('join_room', { roomId: roomId });
     
-    const handleNewMessage = (backendMessage)
-    const handleReaction = ({ messageId, reactions })
-    const handleMessageEdited = ({ messageId, newText, isEdited })
-    const handleMessageDeleted = ({ messageId })
+    // --- ОСЬ ТУТ Я ПОВЕРНУВ ЛОГІКУ ДЛЯ ВАШИХ ФУНКЦІЙ ---
+    const handleNewMessage = (backendMessage) => {
+      if (backendMessage.roomId !== roomId) return;
+      setMessages(prev => {
+        if (prev.some(m => m.id === backendMessage.id)) return prev;
+        const isMe = String(backendMessage.senderId) === String(currentUser?.id) || 
+                     String(backendMessage.senderId) === String(currentUser?.email);
+        return [...prev, { ...backendMessage, isMe, read: false }];
+      });
+    };
+
+    const handleReaction = ({ messageId, reactions }) => {
+      setMessages(prev => prev.map(m => m.id === messageId ? { ...m, reactions } : m));
+    };
+
+    const handleMessageEdited = ({ messageId, newText, isEdited }) => {
+      setMessages(prev => prev.map(m => m.id === messageId ? { ...m, text: newText, isEdited } : m));
+    };
+
+    const handleMessageDeleted = ({ messageId }) => {
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+    };
+    // ----------------------------------------------------
+
     const handleMessagePinned = (msg) => setPinnedMessage(msg);
     const handleMessageUnpinned = () => setPinnedMessage(null);
 
@@ -96,7 +113,6 @@ useEffect(() => {
     socket.on('message_deleted', handleMessageDeleted);
     socket.on('message_pinned', handleMessagePinned);
     socket.on('message_unpinned', handleMessageUnpinned);
-    
     socket.on('messages_read', handleMessagesRead);
 
     return () => {
@@ -106,8 +122,6 @@ useEffect(() => {
         socket.off('message_deleted', handleMessageDeleted);
         socket.off('message_pinned', handleMessagePinned);
         socket.off('message_unpinned', handleMessageUnpinned);
-        
-        // 3. ВИМИКАЄМО СЛУХАЧА ПРИ ВИХОДІ
         socket.off('messages_read', handleMessagesRead);
     };
   }, [socket, roomId, currentUser]);
@@ -194,7 +208,7 @@ useEffect(() => {
         participants={participants}
         currentUser={currentUser}
         refreshParticipants={fetchParticipants}
-        onLeaveGroup={onBack} // Передаємо функцію виходу на головний екран
+        onLeaveGroup={onBack}
       />
 
       <div className="h-[72px] px-6 border-b border-white/5 flex items-center justify-between bg-[#131933]/80 backdrop-blur-xl sticky top-0 z-40 shadow-[0_4_30px_rgba(0,0,0,0.1)]">
@@ -218,7 +232,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* ЗАКРІПЛЕНЕ ПОВІДОМЛЕННЯ */}
       {pinnedMessage && (
         <div className="bg-[#1e1b2e]/95 backdrop-blur-md border-b border-white/5 px-6 py-2.5 flex items-center justify-between z-30 sticky top-[72px] animate-in slide-in-from-top-2 fade-in">
             <div className="flex items-center gap-3 overflow-hidden text-sm">
@@ -234,7 +247,6 @@ useEffect(() => {
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 chat-custom-scroll relative z-10">
         {(messages || []).map((msg, index) => {
-           // СИСТЕМНЕ ПОВІДОМЛЕННЯ
            if (msg.isSystem) {
              return (
                <div key={msg.id} className="flex justify-center w-full my-4 msg-enter">
@@ -245,7 +257,6 @@ useEffect(() => {
              );
            }
 
-           // ЗВИЧАЙНЕ ПОВІДОМЛЕННЯ
            const isMe = msg.isMe;
            const sender = getParticipantData(msg.senderId, msg.senderName);
            const isSequential = index > 0 && messages[index - 1].senderId === msg.senderId && !messages[index - 1].isSystem;
