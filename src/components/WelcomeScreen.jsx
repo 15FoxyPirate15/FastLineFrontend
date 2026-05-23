@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ListTodo, Calendar, PhoneCall, Video, Zap, ArrowUpRight, Sparkles } from 'lucide-react'; 
+import { ListTodo, Calendar, PhoneCall, Video, ArrowUpRight, Sparkles, Activity, CheckCircle2, UserPlus, FolderKanban, MessageSquare, Clock, ArrowRight } from 'lucide-react'; 
 
 // НОВИЙ ФОН: "Aurora Grid" (Північне сяйво + Сітка)
 const WorkspaceBackground = () => {
@@ -30,45 +30,94 @@ const WorkspaceBackground = () => {
 };
 
 const WelcomeScreen = ({ onNavigate, currentUser }) => {
+  const [activities, setActivities] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Отримуємо поточну дату
   const today = new Date();
   const dateString = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  const firstName = currentUser?.name?.split(' ')[0] || 'Team';
+  const firstName = currentUser?.name?.split(' ')[0] || currentUser?.full_name?.split(' ')[0] || 'Team';
+
+  useEffect(() => {
+    // Імітація завантаження з бекенду (GET /users/me/feed)
+    setTimeout(() => {
+      setActivities([
+        { id: 1, type: 'task_completed', user: 'Maxim', text: 'completed task "JWT setup"', time: '10 mins ago', actionPath: 'tasks' },
+        { id: 2, type: 'project_joined', user: 'Katya', text: 'joined "FastLine Redesign"', time: '2 hours ago', actionPath: 'projects' },
+        { id: 3, type: 'mention', user: 'Orest', text: 'mentioned you in a comment', time: 'Yesterday', actionPath: 'projects' }
+      ]);
+      setIsLoading(false);
+    }, 800);
+  }, []);
+
+  const getIconForType = (type) => {
+    switch(type) {
+      case 'task_completed': return <CheckCircle2 size={14} className="text-emerald-400" />;
+      case 'project_joined': return <UserPlus size={14} className="text-blue-400" />;
+      case 'mention': return <MessageSquare size={14} className="text-pink-400" />;
+      case 'new_project': return <FolderKanban size={14} className="text-purple-400" />;
+      default: return <Activity size={14} className="text-gray-400" />;
+    }
+  };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center h-full w-full text-white relative z-10 overflow-hidden p-6 md:p-12"> 
+    <div className="flex-1 flex flex-col items-center justify-center h-full w-full text-white relative z-10 overflow-y-auto custom-scrollbar p-6 md:p-12"> 
       
       <WorkspaceBackground />
 
       {/* Bento Сітка */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl relative z-10">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl relative z-10 my-auto">
         
-        {/* ВЕЛИКА КАРТКА ПРИВІТАННЯ */}
+        {/* ВЕЛИКА КАРТКА ПРИВІТАННЯ + СТРІЧКА НОВИН */}
         <div className="md:col-span-2 bg-[#0a0f1e]/40 backdrop-blur-3xl border border-white/10 rounded-[2rem] p-8 md:p-10 flex flex-col justify-between relative overflow-hidden group animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150 fill-mode-backwards shadow-2xl">
           {/* Внутрішній відблиск */}
-          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-          <div className="absolute -top-32 -right-32 w-80 h-80 bg-gradient-to-br from-[#6d28d9]/30 to-[#3b82f6]/30 rounded-full blur-[80px] group-hover:blur-[100px] transition-all duration-700"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+          <div className="absolute -top-32 -right-32 w-80 h-80 bg-gradient-to-br from-[#6d28d9]/30 to-[#3b82f6]/30 rounded-full blur-[80px] group-hover:blur-[100px] transition-all duration-700 pointer-events-none"></div>
           
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 text-[#a19bfe] font-medium mb-6">
-              <Sparkles size={18} />
-              <span>{dateString}</span>
+          <div className="relative z-10 flex flex-col h-full">
+            <div>
+                <div className="flex items-center gap-2 text-[#a19bfe] font-medium mb-6">
+                <Sparkles size={18} />
+                <span>{dateString}</span>
+                </div>
+                <h1 className="text-4xl md:text-5xl font-black mb-6 tracking-tight">
+                Welcome back, <br className="hidden md:block"/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#a19bfe] to-[#3b82f6]">{firstName}!</span>
+                </h1>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight">
-              Welcome back, <br className="hidden md:block"/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#a19bfe] to-[#3b82f6]">{firstName}!</span>
-            </h1>
-            <p className="text-gray-400 max-w-md text-lg leading-relaxed">
-              Your secure FastLine workspace is ready. What would you like to focus on today?
-            </p>
-          </div>
 
-          <div className="mt-10 relative z-10">
-             <div className="inline-flex items-center gap-3 bg-[#030408]/60 border border-white/5 px-5 py-3 rounded-2xl shadow-inner">
-                <Zap size={20} className="text-[#3b82f6]" />
-                <span className="text-sm font-bold text-gray-300">All systems operational</span>
-             </div>
+            {/* Вбудована Стрічка Активності */}
+            <div className="mt-2 flex-1 flex flex-col bg-[#030408]/60 border border-white/5 rounded-2xl p-5 shadow-inner">
+                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Activity size={12} className="text-[#3b82f6]"/> Latest Updates
+                </h3>
+                
+                {isLoading ? (
+                    <div className="flex-1 flex items-center justify-center text-gray-500 text-sm animate-pulse min-h-[100px]">Loading updates...</div>
+                ) : activities.length === 0 ? (
+                    <div className="flex-1 flex items-center justify-center text-gray-500 text-sm italic min-h-[100px]">No recent activity.</div>
+                ) : (
+                    <div className="space-y-2 overflow-y-auto pr-2 custom-scrollbar max-h-[160px]">
+                        {activities.map((act) => (
+                        <div key={act.id} onClick={() => onNavigate(act.actionPath)} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all cursor-pointer group/item">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-8 h-8 rounded-full bg-[#1e2336] flex items-center justify-center shrink-0 border border-white/5 shadow-sm">
+                                    {getIconForType(act.type)}
+                                </div>
+                                <div className="truncate">
+                                    <p className="text-sm text-gray-300 truncate">
+                                        <span className="font-bold text-white mr-1">{act.user}</span>
+                                        {act.text}
+                                    </p>
+                                    <p className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5"><Clock size={10}/> {act.time}</p>
+                                </div>
+                            </div>
+                            <ArrowRight size={14} className="text-gray-600 opacity-0 group-hover/item:opacity-100 group-hover/item:text-white transition-all transform -translate-x-2 group-hover/item:translate-x-0 shrink-0 ml-2" />
+                        </div>
+                        ))}
+                    </div>
+                )}
+            </div>
           </div>
         </div>
 

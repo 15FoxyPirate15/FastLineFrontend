@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Clock, Plus, Home, Calendar as CalendarIcon, Trash2 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
+
+const WorkspaceBackground = () => (
+  <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 bg-[#05060f]">
+    <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-[#6d28d9] rounded-full mix-blend-screen filter blur-[150px] opacity-20 animate-pulse" style={{ animationDuration: '8s' }}></div>
+    <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-[#3b82f6] rounded-full mix-blend-screen filter blur-[150px] opacity-10 animate-pulse" style={{ animationDuration: '12s' }}></div>
+    <div className="absolute top-[20%] right-[20%] w-[30%] h-[30%] bg-[#a19bfe] rounded-full mix-blend-screen filter blur-[120px] opacity-10 animate-pulse" style={{ animationDuration: '10s' }}></div>
+    <style>{`.tech-grid { background-size: 40px 40px; background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px); mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%); -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%); }`}</style>
+    <div className="absolute inset-0 tech-grid"></div>
+  </div>
+);
 
 const CalendarPage = ({ onNavigate }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -34,7 +44,6 @@ const CalendarPage = ({ onNavigate }) => {
     if (!title) return;
     const time = prompt("Event time (e.g. 14:00):", "12:00");
     
-    // Форматуємо дату в "YYYY-MM-DD" для бекенду
     const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
 
     try {
@@ -81,7 +90,6 @@ const CalendarPage = ({ onNavigate }) => {
     return day === selectedDate.getDate() && currentDate.getMonth() === selectedDate.getMonth() && currentDate.getFullYear() === selectedDate.getFullYear();
   };
 
-  // Фільтруємо події для вибраної дати
   const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
   const dailyEvents = events.filter(e => e.date === selectedDateStr);
 
@@ -98,16 +106,15 @@ const CalendarPage = ({ onNavigate }) => {
           key={day} 
           onClick={() => setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))}
           className={`
-            h-10 md:h-12 w-10 md:w-12 mx-auto flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 text-sm md:text-base font-medium relative
-            ${isSelected(day) ? 'bg-[#6d28d9] text-white shadow-lg shadow-purple-900/50 scale-105 border border-[#a19bfe]/50' : ''}
+            h-10 md:h-12 w-10 md:w-12 mx-auto flex items-center justify-center rounded-xl cursor-pointer transition-all duration-300 text-sm md:text-base font-bold relative z-10
+            ${isSelected(day) ? 'bg-gradient-to-br from-[#6d28d9] to-[#3b82f6] text-white shadow-[0_0_20px_rgba(109,40,217,0.5)] scale-110 border border-white/20' : ''}
             ${isToday(day) && !isSelected(day) ? 'bg-white/10 text-white border border-white/20' : ''}
-            ${!isSelected(day) && !isToday(day) ? 'text-gray-300 hover:bg-white/5 hover:text-white border border-transparent hover:border-white/10' : ''}
+            ${!isSelected(day) && !isToday(day) ? 'text-gray-400 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/10' : ''}
           `}
         >
           {day}
-          {/* Індикатор, якщо в цей день є подія */}
           {events.some(e => e.date === `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`) && (
-            <div className="absolute bottom-1 w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
+            <div className="absolute -bottom-1 md:bottom-1 w-1.5 h-1.5 bg-[#a19bfe] rounded-full shadow-[0_0_5px_rgba(161,155,254,0.8)]"></div>
           )}
         </div>
       );
@@ -116,80 +123,96 @@ const CalendarPage = ({ onNavigate }) => {
   };
 
   return (
-    <div className="h-full flex flex-col p-6 overflow-y-auto custom-scrollbar relative z-10">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Calendar</h1>
-          <p className="text-gray-400 text-sm mt-1">Plan your schedule and keep track of events.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button onClick={() => onNavigate('welcome')} className="flex items-center gap-2 bg-[#131933] hover:bg-white/10 text-gray-300 hover:text-white px-4 py-2 rounded-xl transition-all border border-white/10 shadow-inner">
-            <Home size={16} /> <span className="text-sm font-medium">Home</span>
-          </button>
-        </div>
-      </div>
+    <div className="flex-1 flex flex-col h-full w-full text-white relative z-10 overflow-y-auto custom-scrollbar p-6 md:p-12">
+      <Toaster position="top-center" />
+      <WorkspaceBackground />
 
-      <div className="flex-1 max-w-7xl mx-auto w-full flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 bg-[#1d1a4a] border border-white/5 rounded-2xl p-6 shadow-xl flex flex-col h-fit">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-              <CalendarIcon size={24} className="text-[#a19bfe]" />
-              {monthNames[currentDate.getMonth()]} <span className="text-gray-500 font-normal">{currentDate.getFullYear()}</span>
-            </h2>
-            <div className="flex gap-2">
-              <button onClick={handlePrevMonth} className="p-2 rounded-xl bg-[#131933] hover:bg-white/10 text-gray-300 hover:text-white border border-white/5 transition-colors"><ChevronLeft size={18} /></button>
-              <button onClick={handleNextMonth} className="p-2 rounded-xl bg-[#131933] hover:bg-white/10 text-gray-300 hover:text-white border border-white/5 transition-colors"><ChevronRight size={18} /></button>
+      <div className="w-full max-w-7xl mx-auto relative z-10 flex flex-col h-full">
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div>
+            <h1 className="text-4xl font-black text-white tracking-tight">Calendar</h1>
+            <p className="text-gray-400 text-base mt-2">Plan your schedule and keep track of events.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={() => onNavigate('welcome')} className="flex items-center gap-2 bg-[#0a0f1e]/60 backdrop-blur-xl border border-white/10 hover:border-white/30 text-gray-300 hover:text-white px-5 py-3 rounded-2xl transition-all font-bold shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+              <Home size={18} /> Home
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 flex flex-col lg:flex-row gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150 fill-mode-backwards pb-10">
+          
+          {/* MAIN CALENDAR GRID */}
+          <div className="flex-[2] bg-[#0a0f1e]/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl flex flex-col h-fit">
+            <div className="flex justify-between items-center mb-10">
+              <h2 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
+                <CalendarIcon size={28} className="text-[#a19bfe]" />
+                {monthNames[currentDate.getMonth()]} <span className="text-gray-600 font-medium">{currentDate.getFullYear()}</span>
+              </h2>
+              <div className="flex gap-3">
+                <button onClick={handlePrevMonth} className="p-3 rounded-2xl bg-[#030408]/60 hover:bg-white/10 text-gray-300 hover:text-white border border-white/5 transition-all shadow-inner"><ChevronLeft size={20} /></button>
+                <button onClick={handleNextMonth} className="p-3 rounded-2xl bg-[#030408]/60 hover:bg-white/10 text-gray-300 hover:text-white border border-white/5 transition-all shadow-inner"><ChevronRight size={20} /></button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-7 mb-6 text-center">
+              {daysOfWeek.map(day => <div key={day} className="text-gray-500 text-[11px] font-black uppercase tracking-widest">{day}</div>)}
+            </div>
+
+            <div className="grid grid-cols-7 place-items-center gap-y-4 gap-x-2">
+              {renderCalendarDays()}
             </div>
           </div>
 
-          <div className="grid grid-cols-7 mb-4 text-center">
-            {daysOfWeek.map(day => <div key={day} className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">{day}</div>)}
-          </div>
-
-          <div className="grid grid-cols-7 place-items-center gap-y-3">
-            {renderCalendarDays()}
-          </div>
-        </div>
-
-        <div className="w-full lg:w-[400px] flex flex-col gap-6">
-          <div className="bg-gradient-to-br from-[#4c1d95] to-[#3b0764] rounded-2xl p-6 text-white shadow-xl border border-purple-500/30 relative overflow-hidden group">
-             <div className="relative z-10">
-                <div className="text-sm font-bold tracking-widest uppercase text-purple-300 mb-1">{daysOfWeek[selectedDate.getDay()]}</div>
-                <div className="text-4xl font-black tracking-tight">{selectedDate.getDate()} {monthNames[selectedDate.getMonth()]}</div>
-                <div className="mt-6 flex items-center justify-between">
-                    <span className="text-xs font-semibold bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 backdrop-blur-md">
-                      {dailyEvents.length} Events today
-                    </span>
-                    <button onClick={handleAddEvent} className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-xl transition-colors backdrop-blur-md border border-white/10">
-                      <Plus size={18} />
-                    </button>
-                </div>
-             </div>
-             <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/30 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-purple-400/30 transition-colors duration-500"></div>
-          </div>
-
-          <div className="flex-1 bg-[#1d1a4a] border border-white/5 rounded-2xl p-6 shadow-xl flex flex-col h-fit max-h-[500px]">
-            <h3 className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mb-4">Schedule for {selectedDateStr}</h3>
+          {/* SIDE PANEL */}
+          <div className="flex-1 flex flex-col gap-8 w-full lg:max-w-md">
             
-            <div className="space-y-3 overflow-y-auto custom-scrollbar pr-2 flex-1">
-              {isLoading ? (
-                <div className="text-gray-500 text-sm">Loading events...</div>
-              ) : dailyEvents.length === 0 ? (
-                <div className="text-gray-500 text-sm">No events scheduled.</div>
-              ) : (
-                dailyEvents.map(event => (
-                  <div key={event.id} className="group p-4 rounded-xl bg-[#131933] border border-white/5 hover:border-purple-500/30 transition-all shadow-sm relative overflow-hidden">
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-purple-500"></div>
-                    <div className="flex justify-between items-start mb-3 pl-2">
-                      <h4 className="text-white text-sm font-semibold group-hover:text-[#a19bfe] transition-colors">{event.title}</h4>
-                      <button onClick={() => handleDeleteEvent(event.id)} className="text-gray-500 hover:text-red-400"><Trash2 size={14}/></button>
-                    </div>
-                    <div className="space-y-1.5 pl-2">
-                      <div className="flex items-center text-gray-400 text-xs font-medium"><Clock size={12} className="mr-2 text-gray-500" />{event.time}</div>
-                    </div>
+            {/* GLOWING SELECTED DATE CARD */}
+            <div className="bg-gradient-to-br from-[#6d28d9]/80 to-[#3b82f6]/80 backdrop-blur-2xl rounded-[2.5rem] p-8 text-white shadow-[0_0_40px_rgba(109,40,217,0.3)] border border-white/20 relative overflow-hidden group">
+               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+               <div className="relative z-10">
+                  <div className="text-xs font-black tracking-widest uppercase text-white/70 mb-2">{daysOfWeek[selectedDate.getDay()]}</div>
+                  <div className="text-5xl font-black tracking-tight mb-8">{selectedDate.getDate()} {monthNames[selectedDate.getMonth()]}</div>
+                  
+                  <div className="flex items-center justify-between pt-6 border-t border-white/20">
+                      <span className="text-sm font-bold bg-black/20 px-4 py-2 rounded-xl backdrop-blur-md">
+                        {dailyEvents.length} Events today
+                      </span>
+                      <button onClick={handleAddEvent} className="bg-white text-[#6d28d9] hover:bg-gray-100 p-3.5 rounded-2xl transition-all shadow-lg active:scale-95">
+                        <Plus size={20} className="font-black" />
+                      </button>
                   </div>
-                ))
-              )}
+               </div>
+               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-white/20 transition-colors duration-700"></div>
+            </div>
+
+            {/* DAILY EVENTS LIST */}
+            <div className="flex-1 bg-[#0a0f1e]/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-8 shadow-2xl flex flex-col h-fit max-h-[500px]">
+              <h3 className="text-xs text-[#a19bfe] font-black uppercase tracking-widest mb-6">Schedule for {selectedDateStr}</h3>
+              
+              <div className="space-y-4 overflow-y-auto custom-scrollbar pr-2 flex-1">
+                {isLoading ? (
+                  <div className="text-gray-500 text-sm italic">Loading events...</div>
+                ) : dailyEvents.length === 0 ? (
+                  <div className="text-gray-500 text-sm italic flex flex-col items-center justify-center py-10 bg-[#030408]/40 rounded-2xl border border-dashed border-white/10">
+                    No events scheduled.
+                  </div>
+                ) : (
+                  dailyEvents.map(event => (
+                    <div key={event.id} className="group p-5 rounded-2xl bg-[#030408]/60 border border-white/5 hover:border-[#a19bfe]/40 transition-all shadow-md relative overflow-hidden">
+                      <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-[#6d28d9] to-[#3b82f6]"></div>
+                      <div className="flex justify-between items-start mb-3 pl-3">
+                        <h4 className="text-white text-base font-bold group-hover:text-[#a19bfe] transition-colors">{event.title}</h4>
+                        <button onClick={() => handleDeleteEvent(event.id)} className="text-gray-500 hover:text-red-400 bg-white/5 hover:bg-red-500/10 p-1.5 rounded-lg transition-all"><Trash2 size={16}/></button>
+                      </div>
+                      <div className="pl-3">
+                        <div className="flex items-center text-[#3b82f6] text-xs font-bold bg-[#3b82f6]/10 w-fit px-3 py-1.5 rounded-lg"><Clock size={14} className="mr-2" />{event.time}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>

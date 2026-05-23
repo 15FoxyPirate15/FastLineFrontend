@@ -13,10 +13,8 @@ const QuickNav = ({ activeView, onNavigate }) => {
   ];
 
   return (
-    // Змінено позицію: тепер внизу справа (bottom-8 right-8)
     <div className="fixed right-8 bottom-8 z-[100] flex flex-col items-end gap-3">
       
-      {/* Виїзне меню (тепер виїжджає вгору) */}
       <div className={`overflow-hidden transition-all duration-300 ease-in-out origin-bottom-right ${isOpen ? 'scale-100 opacity-100 mb-2' : 'scale-90 opacity-0 pointer-events-none absolute bottom-full'}`}>
         <div className="bg-[#1d1a4a]/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] p-2 flex flex-col gap-1 w-48">
           {navItems.map(item => {
@@ -38,7 +36,6 @@ const QuickNav = ({ activeView, onNavigate }) => {
         </div>
       </div>
 
-      {/* Кнопка-тригер */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className="w-14 h-14 bg-[#6d28d9] hover:bg-[#5b21b6] border border-white/20 rounded-full shadow-[0_0_20px_rgba(109,40,217,0.4)] flex items-center justify-center text-white transition-all transform hover:scale-105"

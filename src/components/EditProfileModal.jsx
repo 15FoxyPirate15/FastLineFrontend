@@ -25,7 +25,6 @@ const EditProfileModal = ({ isOpen, onClose, currentUser, onSave }) => {
     { id: 'invisible', label: 'Invisible', color: 'bg-gray-500' }
   ];
 
-  // Initialize data
   useEffect(() => {
     if (isOpen && currentUser) {
       setFormData({
@@ -41,7 +40,6 @@ const EditProfileModal = ({ isOpen, onClose, currentUser, onSave }) => {
     }
   }, [isOpen, currentUser]);
 
-  // Close on Esc and outside click for Status Dropdown
   useEffect(() => {
     const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
     const handleClickOutside = (e) => {
@@ -116,7 +114,6 @@ const EditProfileModal = ({ isOpen, onClose, currentUser, onSave }) => {
               <div className={`absolute bottom-1 right-1 w-6 h-6 rounded-full border-4 border-[#1a1d36] shadow-sm ${currentStatusObj.color}`}></div>
             </div>
             
-            {/* СУЧАСНИЙ ВИПАДАЮЧИЙ СПИСОК СТАТУСУ */}
             <div className="mt-5 relative z-50" ref={statusMenuRef}>
               <button 
                 onClick={() => setIsStatusMenuOpen(!isStatusMenuOpen)}

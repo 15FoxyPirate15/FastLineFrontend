@@ -9,8 +9,10 @@ import QuickNav from './components/QuickNav';
 import ProjectsPage from './components/ProjectsPage';
 import CreateGroupModal from './components/CreateGroupModal';
 import Loader from './components/Loader';
+import ProjectChatArea from './components/ProjectChatArea';
 import ContactsPage from './components/ContactsPage';
 import ProjectDetailsPage from './components/ProjectDetailsPage';
+import { setupNotifications } from './firebase/fcm';
 
 import TasksPage from './components/TasksPage';
 import CalendarPage from './components/CalendarPage';
@@ -48,9 +50,10 @@ class ErrorBoundary extends React.Component {
 function App() {
   // --- 1. СТАНИ (STATES) ---
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAuthChecking, setIsAuthChecking] = useState(true); // Лоадер ввімкнений зі старту
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [selectedGroupChat, setSelectedGroupChat] = useState(null);
   const [activeView, setActiveView] = useState('welcome');
+  const [activeProjectId, setActiveProjectId] = useState(null); // НОВИЙ СТАН ДЛЯ ID ПРОЄКТУ
   const [socket, setSocket] = useState(null);
   const [user, setUser] = useState(null);
   const [theme, setTheme] = useState('default');
@@ -58,7 +61,15 @@ function App() {
   const [refreshSidebar, setRefreshSidebar] = useState(0);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
 
-  // --- 2. ПЕРЕВІРКА ТОКЕНА ПРИ ЗАВАНТАЖЕННІ (ЛОАДЕР) ---
+  // РОЗУМНА ФУНКЦІЯ НАВІГАЦІЇ
+  const handleNavigate = (view, id = null) => {
+    setActiveView(view);
+    if (id) {
+      setActiveProjectId(id);
+    }
+  };
+
+  // --- 2. ПЕРЕВІРКА ТОКЕНА ПРИ ЗАВАНТАЖЕННІ ---
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
@@ -68,10 +79,9 @@ function App() {
       setIsAuthenticated(true);
     }
     
-    // Імітуємо невелику затримку для красивої появи лоадера
     setTimeout(() => {
       setIsAuthChecking(false);
-    }, 1200); // 1.2 секунди для ефекту FastLine
+    }, 1200); 
   }, []);
 
   // --- 3. ЗАВАНТАЖЕННЯ ДАНИХ ЮЗЕРА ТА СОКЕТІВ ---
@@ -143,46 +153,45 @@ function App() {
     }
 
     switch(activeView) {
-      case 'ai_chat': return <ChatArea key="ai" chatName="AI Assistant" isAi={true} currentUser={user} socket={socket} roomId="ai_room" onBack={() => setActiveView('welcome')} />;
-      case 'chat_direct': return <ChatArea key={`chat_${selectedChatUser?.roomId || selectedChatUser?.id || 'temp'}`} chatName={selectedChatUser?.displayName || selectedChatUser?.name || "User"} isAi={false} currentUser={user} socket={socket} roomId={selectedChatUser?.roomId || `temp_room_${selectedChatUser?.id || Date.now()}`} onBack={() => setActiveView('welcome')} />;
-      case 'group_chat': return <GroupChatArea key={`group_${selectedGroupChat?.id || 'temp'}`} groupName={selectedGroupChat?.name || "Team Group"} currentUser={user} socket={socket} roomId={selectedGroupChat?.id} onBack={() => setActiveView('welcome')} />;
-      case 'edit_profile': return <EditProfile currentUser={user} onBack={() => setActiveView('welcome')} onSave={(newData) => { setUser(prev => ({ ...prev, ...newData })); setActiveView('welcome'); }} />;
-      case 'tasks': return <TasksPage onNavigate={setActiveView} />;
-      case 'calendar': return <CalendarPage onNavigate={setActiveView} />;
-      case 'calls': return <CallsPage onNavigate={setActiveView} />;
-      case 'contacts': return <ContactsPage onNavigate={setActiveView} onStartChat={(user) => { setSelectedChatUser(user); setActiveView('chat_direct'); }} />;
-      case 'meetings': return <MeetingsPage onNavigate={setActiveView} />;
-      case 'projects': return <ProjectsPage onNavigate={setActiveView} />;
-      case 'project_details': return <ProjectDetailsPage onNavigate={setActiveView} />;
-      default: return <div className="relative h-full flex flex-col"><WelcomeScreen onNavigate={setActiveView} /></div>;
+      case 'ai_chat': return <ChatArea key="ai" chatName="AI Assistant" isAi={true} currentUser={user} socket={socket} roomId="ai_room" onBack={() => handleNavigate('welcome')} />;
+      case 'chat_direct': return <ChatArea key={`chat_${selectedChatUser?.roomId || selectedChatUser?.id || 'temp'}`} chatName={selectedChatUser?.displayName || selectedChatUser?.name || "User"} isAi={false} currentUser={user} socket={socket} roomId={selectedChatUser?.roomId || `temp_room_${selectedChatUser?.id || Date.now()}`} onBack={() => handleNavigate('welcome')} />;
+      case 'group_chat': return <GroupChatArea key={`group_${selectedGroupChat?.id || 'temp'}`} groupName={selectedGroupChat?.name || "Team Group"} currentUser={user} socket={socket} roomId={selectedGroupChat?.id} onBack={() => handleNavigate('welcome')} />;
+      case 'edit_profile': return <EditProfile currentUser={user} onBack={() => handleNavigate('welcome')} onSave={(newData) => { setUser(prev => ({ ...prev, ...newData })); handleNavigate('welcome'); }} />;
+      case 'calendar': return <CalendarPage onNavigate={handleNavigate} />;
+      case 'calls': return <CallsPage onNavigate={handleNavigate} />;
+      case 'tasks': return <TasksPage onNavigate={handleNavigate} currentUser={user} />;
+      case 'contacts': return <ContactsPage onNavigate={handleNavigate} onStartChat={(targetUser) => { setSelectedChatUser(targetUser); handleNavigate('chat_direct'); }} />;
+      case 'meetings': return <MeetingsPage onNavigate={handleNavigate} />;
+      case 'projects': return <ProjectsPage onNavigate={handleNavigate} currentUser={user} />;
+      case 'project_chat':
+        return (
+          <ProjectChatArea 
+            projectId={activeProjectId} // ЗМІНЕНО ТУТ
+            projectName="Project Team" 
+            currentUser={user} 
+            onBack={() => handleNavigate('projects')} 
+            onNavigateToDashboard={() => handleNavigate('project_details', activeProjectId)} // І ЗМІНЕНО ТУТ
+            socket={socket} 
+          />
+        );
+      case 'project_details': return <ProjectDetailsPage onNavigate={handleNavigate} projectId={activeProjectId} currentUser={user} socket={socket} />;
+      default: return <div className="relative h-full flex flex-col"><WelcomeScreen onNavigate={handleNavigate} currentUser={user} /></div>;
     }
   };
 
   // --- 5. ГОЛОВНИЙ РЕНДЕР ---
-
-  // Етап 1: Показуємо красивий лоадер при вході на сайт
   if (isAuthChecking) {
     return (
       <div className="min-h-screen w-full bg-[#030408] flex items-center justify-center">
-        <Loader 
-          title="Starting FastLine..." 
-          subtitle="Establishing secure end-to-end connection." 
-        />
+        <Loader title="Starting FastLine..." subtitle="Establishing secure end-to-end connection." />
       </div>
     );
   }
 
-  // Етап 2: Якщо юзер не авторизований, показуємо сторінку входу
   if (!isAuthenticated) {
-    return (
-      <Login onLoginSuccess={(userData) => {
-        setUser(userData);
-        setIsAuthenticated(true);
-      }} />
-    );
+    return <Login onLoginSuccess={(userData) => { setUser(userData); setIsAuthenticated(true); }} />;
   }
 
-  // Етап 3: Головний інтерфейс додатку
   return (
     <div className="flex h-screen w-full overflow-hidden bg-black relative">
       <style>
@@ -193,15 +202,15 @@ function App() {
       </style>
 
       <Sidebar 
-        onNavigate={setActiveView} 
+        onNavigate={handleNavigate} 
         currentUser={user} 
-        onProfileClick={() => setActiveView('edit_profile')}
+        onProfileClick={() => handleNavigate('edit_profile')}
         onLogout={handleLogout}
         refreshTrigger={refreshSidebar}
         onCreateGroupClick={() => setIsGroupModalOpen(true)}
         onStartGroupChat={(groupData) => {
             setSelectedGroupChat(groupData);
-            setActiveView('group_chat');
+            handleNavigate('group_chat');
         }}
         onStartChat={async (targetUser) => { 
             if (!targetUser) return;
@@ -221,13 +230,13 @@ function App() {
             } catch (err) { console.warn("Бекенд не створив чат:", err); }
 
             setSelectedChatUser({ ...targetUser, roomId: finalRoomId });
-            setActiveView('chat_direct');
+            handleNavigate('chat_direct');
             setRefreshSidebar(prev => prev + 1); 
         }}
       />
       
       <div className={`flex-1 ${getBackground()} transition-all duration-1000 ease-in-out relative overflow-hidden`}>
-        <QuickNav activeView={activeView} onNavigate={setActiveView} />
+        <QuickNav activeView={activeView} onNavigate={handleNavigate} />
 
         <div key={activeView} className="h-full animate-page">
           <ErrorBoundary>
@@ -240,9 +249,7 @@ function App() {
         isOpen={isGroupModalOpen} 
         onClose={() => setIsGroupModalOpen(false)} 
         currentUser={user}
-        onSuccess={(newGroupData) => {
-           setRefreshSidebar(prev => prev + 1);
-        }}
+        onSuccess={() => { setRefreshSidebar(prev => prev + 1); }}
       />
     </div>
   );

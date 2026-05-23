@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Loader from './Loader';
 import { ShieldCheck, Users, Kanban, Zap } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import { setupNotifications } from '../firebase/fcm';
 
 const getFriendlyErrorMessage = (errorMsg) => {
   if (!errorMsg) return "Something went wrong. Please try again.";
@@ -106,33 +107,44 @@ export default function Login({ onLoginSuccess }) {
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [regData, setRegData] = useState({ full_name: '', email: '', password: '' });
 
-  const handleLoginSubmit = async (e) => {
+const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (isLoading) return;
     setIsLoading(true);
+    
     try {
       const response = await fetch('https://backendfastline.onrender.com/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(loginData),
       });
+
       const data = await response.json();
+
       if (response.ok) {
         localStorage.setItem('token', data.token);
         if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+
+        await setupNotifications();
+
         setTimeout(() => {
           setIsLoading(false);
           if (onLoginSuccess) onLoginSuccess(data.user);
         }, 1000);
       } else {
+        // Логін не вдався, сповіщення не налаштовуємо
         setIsLoading(false);
-        toast.error(getFriendlyErrorMessage(data.message), { style: { background: '#1e1b2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }});
+        toast.error(getFriendlyErrorMessage(data.message), { 
+            style: { background: '#1e1b2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }
+        });
       }
     } catch (error) {
       setIsLoading(false);
-      toast.error("Server connection error. Please try again.", { style: { background: '#1e1b2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }});
+      toast.error("Server connection error. Please try again.", { 
+          style: { background: '#1e1b2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }
+      });
     }
-  };
+};
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();

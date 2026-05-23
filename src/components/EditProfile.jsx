@@ -46,7 +46,6 @@ const EditProfile = ({ onBack, currentUser }) => {
     </div>
   );
 
-  // МАСИВ ДЛЯ АНІМОВАНОГО МЕНЮ
   const tabs = [
     { id: 'general', label: 'General', icon: Settings },
     { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -68,16 +67,13 @@ const EditProfile = ({ onBack, currentUser }) => {
         `}
       </style>
       
-      {/* ЛІВИЙ САЙДБАР З АНІМАЦІЄЮ ПЕРЕТІКАННЯ */}
       <div className="w-72 bg-[#131627] border-r border-white/5 p-6 flex flex-col gap-2 shrink-0 z-10">
         <button onClick={onBack} className="text-gray-400 hover:text-white flex items-center gap-2 mb-8 text-sm transition-colors w-fit font-medium">
           ← Back to App
         </button>
 
-        {/* Контейнер вкладок */}
         <div className="relative flex flex-col gap-1">
           
-          {/* МАГІЧНИЙ ФОН (Анімація) */}
           <div 
             className="absolute left-0 right-0 h-11 bg-[#6d28d9]/15 border border-[#6d28d9]/30 rounded-xl transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] z-0"
             style={{ transform: `translateY(${activeIndex * 48}px)` }} // 44px (h-11) + 4px (gap-1) = 48px
@@ -101,7 +97,6 @@ const EditProfile = ({ onBack, currentUser }) => {
         </div>
       </div>
 
-      {/* ГОЛОВНА ЗОНА */}
       <div className="flex-1 overflow-y-auto p-8 lg:p-12 custom-settings-scroll">
         <div className="max-w-4xl mx-auto space-y-8">
           
@@ -137,7 +132,7 @@ const EditProfile = ({ onBack, currentUser }) => {
                         </div>
                       </div>
                     </div>
-                    {/* КНОПКА ВИКЛИКУ МОДАЛКИ */}
+                    {/* button */}
                     <button 
                       onClick={() => setIsEditModalOpen(true)}
                       className="bg-[#131627] hover:bg-white/10 text-white text-sm font-bold py-2.5 px-6 rounded-xl border border-white/10 transition-colors shadow-sm active:scale-95"
@@ -285,7 +280,6 @@ const EditProfile = ({ onBack, currentUser }) => {
         </div>
       </div>
 
-      {/* МОДАЛЬНЕ ВІКНО РЕДАГУВАННЯ ПРОФІЛЮ */}
       <EditProfileModal 
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}

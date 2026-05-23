@@ -73,7 +73,6 @@ const ManageMembersModal = ({ isOpen, onClose, roomId, groupName, participants, 
     finally { setIsSavingInfo(false); }
   };
 
-  // ФУНКЦІЯ ВИХОДУ З ГРУПИ
   const handleLeaveGroup = async () => {
     if (!window.confirm("Are you sure you want to leave this group?")) return;
     setIsLeaving(true);
@@ -87,7 +86,7 @@ const ManageMembersModal = ({ isOpen, onClose, roomId, groupName, participants, 
       if (response.ok) {
          toast.success("You left the group.", { style: { background: '#1e1b2e', color: '#fff' }});
          onClose();
-         if (onLeaveGroup) onLeaveGroup(); // Повертає на головний екран
+         if (onLeaveGroup) onLeaveGroup();
       } else {
          toast.error("Failed to leave group", { style: { background: '#1e1b2e', color: '#fff' }});
       }
@@ -187,7 +186,7 @@ const ManageMembersModal = ({ isOpen, onClose, roomId, groupName, participants, 
           </div>
         </div>
 
-        {/* FOOTER З КНОПКОЮ LEAVE GROUP */}
+        {/* FOOTER LEAVE GROUP */}
         <div className="p-4 border-t border-white/5 bg-[#131627] flex justify-between items-center">
             <button 
                onClick={handleLeaveGroup} 

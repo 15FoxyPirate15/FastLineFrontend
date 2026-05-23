@@ -1,31 +1,42 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, ArrowLeft, ArrowRight, X, Reply, Smile, CheckCheck, Check, MoreVertical, Edit2, Trash2, Copy, Hash, Phone, Video as VideoIcon, Pin, Image as ImageIcon, Paperclip, Mic, BellOff, Settings, MoreHorizontal, Link as LinkIcon, File, Headphones, Loader2, FileText } from 'lucide-react';
+import { ArrowLeft, ArrowRight, X, Reply, Smile, CheckCheck, Check, MoreVertical, Edit2, Trash2, Copy, FolderKanban, Phone, Video as VideoIcon, Pin, Image as ImageIcon, Paperclip, Mic, BellOff, Settings, MoreHorizontal, Link as LinkIcon, File, Headphones, LayoutDashboard, Loader2, FileText, Users } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
-import ManageMembersModal from './ManageMembersModal';
 
-// Додали хелпер для розпізнавання картинок
 const isImageUrl = (text) => {
   if (!text || typeof text !== 'string') return false;
   return text.startsWith('http') && (text.match(/\.(jpeg|jpg|gif|png|webp)/i) || text.includes('cloudinary'));
 };
 
-const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, roomId }) => { 
+const ProjectChatArea = ({ projectName = "Project Chat", projectId, currentUser, onBack, onNavigateToDashboard, socket }) => { 
   const [replyingTo, setReplyingTo] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [activeMenu, setActiveMenu] = useState(null);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [participants, setParticipants] = useState([]);
+  const [role, setRole] = useState('member');
   
-  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
-  const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false); 
-  
+  const [isProjectInfoOpen, setIsProjectInfoOpen] = useState(false); 
   const [pinnedMessage, setPinnedMessage] = useState(null);
   const messagesEndRef = useRef(null);
 
-  // ВІДНОВЛЕНО: Стейт та реф для завантаження файлів
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const fileInputRef = useRef(null);
+
+useEffect(() => {
+     // Перевірка ролі юзера в проєкті
+     const checkRole = async () => {
+         const token = localStorage.getItem('token');
+         const res = await fetch(`https://backendfastline.onrender.com/projects/${projectId}`, { headers: { 'Authorization': `Bearer ${token}` }});
+         const proj = await res.json();
+         const myRole = proj.members.find(m => m.uid === (currentUser?.id || currentUser?.uid))?.role;
+         setRole(myRole || 'member');
+     };
+     checkRole();
+  }, [projectId]);
+
+  // Додаємо константи для перевірки прав
+  const canPerformActions = role === 'owner' || role === 'admin';
 
   useEffect(() => {
     const handleGlobalClick = () => { if (activeMenu) setActiveMenu(null); };
@@ -34,10 +45,10 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
   }, [activeMenu]);
 
   const fetchParticipants = async () => {
-    if (!roomId) return;
+    if (!projectId) return;
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`https://backendfastline.onrender.com/chats/${roomId}/participants`, { headers: { 'Authorization': `Bearer ${token}` }});
+        const res = await fetch(`https://backendfastline.onrender.com/chats/${projectId}/participants`, { headers: { 'Authorization': `Bearer ${token}` }});
         if (res.ok) {
             const data = await res.json();
             setParticipants(Array.isArray(data) ? data : []);
@@ -45,16 +56,16 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
     } catch (err) { console.error("Participants fetch error:", err); }
   };
 
-  useEffect(() => { fetchParticipants(); }, [roomId]);
+  useEffect(() => { fetchParticipants(); }, [projectId]);
 
   // --- 1. ВИПРАВЛЕНО: POLLING ТА ЖОРСТКА ПЕРЕВІРКА isMe ---
   useEffect(() => {
-    if (!roomId) return;
+    if (!projectId) return;
 
     const fetchHistory = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`https://backendfastline.onrender.com/messages/${roomId}`, { 
+            const res = await fetch(`https://backendfastline.onrender.com/project-messages/${projectId}`, { 
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!res.ok) return;
@@ -62,7 +73,7 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
             
             if (Array.isArray(history)) {
                 const formattedMessages = history.filter(Boolean).map(m => {
-                    // ЖОРСТКА ПЕРЕВІРКА
+                    // ВИПРАВЛЕНО: Захист від undefined
                     const backendSender = String(m.from || m.senderId || m.userId || m.senderEmail || m.sender || "unknown_sender");
                     const myId = String(currentUser?.id || currentUser?.uid || "unknown_id");
                     const myEmail = String(currentUser?.email || "unknown_email");
@@ -84,7 +95,7 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
                     }
                 });
                 
-                // Оновлюємо, тільки якщо є нові повідомлення
+                // Оновлюємо стейт, тільки якщо є зміни
                 setMessages(prev => {
                     if (prev.length !== formattedMessages.length) return formattedMessages;
                     return prev;
@@ -94,17 +105,17 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
     };
 
     fetchHistory();
-    // POLLING: Запитуємо нові повідомлення кожні 3 секунди
+    // Запускаємо Polling кожні 3 секунди
     const pollingInterval = setInterval(fetchHistory, 3000);
     return () => clearInterval(pollingInterval);
-  }, [roomId, currentUser]);
+  }, [projectId, currentUser]);
 
   useEffect(() => {
-    if (!socket || !roomId) return;
-    socket.emit('join_room', { roomId: roomId });
+    if (!socket || !projectId) return;
+    socket.emit('join_room', { roomId: projectId });
     
     const handleNewMessage = (backendMessage) => {
-      if (backendMessage.roomId !== roomId) return;
+      if (backendMessage.roomId !== projectId) return;
       setMessages(prev => {
         if (prev.some(m => m.id === backendMessage.id)) return prev;
         const isMe = String(backendMessage.senderId) === String(currentUser?.id) || String(backendMessage.senderId) === String(currentUser?.uid) || String(backendMessage.senderId) === String(currentUser?.email);
@@ -112,45 +123,18 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
       });
     };
 
-    const handleReaction = ({ messageId, reactions }) => setMessages(prev => prev.map(m => m.id === messageId ? { ...m, reactions } : m));
-    const handleMessageEdited = ({ messageId, newText, isEdited }) => setMessages(prev => prev.map(m => m.id === messageId ? { ...m, text: newText, isEdited } : m));
-    const handleMessageDeleted = ({ messageId }) => setMessages(prev => prev.filter(m => m.id !== messageId));
-    const handleMessagePinned = (msg) => setPinnedMessage(msg);
-    const handleMessageUnpinned = () => setPinnedMessage(null);
-
-    const handleMessagesRead = ({ roomId: eventRoomId, userId }) => {
-        if (String(userId) !== String(currentUser?.id) && String(userId) !== String(currentUser?.email)) {
-            setMessages(prevMessages => prevMessages.map(msg => msg.isMe ? { ...msg, read: true } : msg));
-        }
-    };
-
     socket.on('new_message', handleNewMessage);
-    socket.on('reaction_added', handleReaction);
-    socket.on('message_edited', handleMessageEdited);
-    socket.on('message_deleted', handleMessageDeleted);
-    socket.on('message_pinned', handleMessagePinned);
-    socket.on('message_unpinned', handleMessageUnpinned);
-    socket.on('messages_read', handleMessagesRead);
-
-    return () => {
-        socket.off('new_message', handleNewMessage);
-        socket.off('reaction_added', handleReaction);
-        socket.off('message_edited', handleMessageEdited);
-        socket.off('message_deleted', handleMessageDeleted);
-        socket.off('message_pinned', handleMessagePinned);
-        socket.off('message_unpinned', handleMessageUnpinned);
-        socket.off('messages_read', handleMessagesRead);
-    };
-  }, [socket, roomId, currentUser]);
+    return () => socket.off('new_message', handleNewMessage);
+  }, [socket, projectId, currentUser]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   // --- 2. ВИПРАВЛЕНО: ДОДАНО HTTP POST ЗАПИТ ПРИ ВІДПРАВЦІ ---
   const handleSend = async () => {
-    if (!input.trim() || !roomId) return;
+    if (!input.trim() || !projectId) return;
     
     if (editingMessage) {
-        if(socket) socket.emit('edit_message', { roomId, messageId: editingMessage.id, newText: input });
+        if (socket) socket.emit('edit_message', { roomId: projectId, messageId: editingMessage.id, newText: input });
         setEditingMessage(null);
         setInput("");
         return;
@@ -162,33 +146,32 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
 
     const senderId = currentUser?.id || currentUser?.uid || currentUser?.email || "unknown";
     const messageData = { 
-        roomId: roomId, 
+        projectId: projectId, 
         text: textToSend, 
         senderId: senderId,
         senderName: currentUser?.name || currentUser?.email?.split('@')[0], 
         replyTo: replyingTo ? { senderName: replyingTo.senderName, text: replyingTo.text } : null 
     };
 
-    // Одразу малюємо локально
+    // Одразу малюємо на екрані
     const tempMsg = { id: Date.now().toString(), text: textToSend, senderId: senderId, isMe: true, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
     setMessages(prev => [...prev, tempMsg]);
 
-    if(socket) socket.emit('send_message', messageData);
+    if (socket) socket.emit('send_message', messageData);
 
     // НАДІЙНИЙ HTTP POST ЗАПИТ
     try {
         const token = localStorage.getItem('token');
-        await fetch(`https://backendfastline.onrender.com/messages`, {
+        await fetch(`https://backendfastline.onrender.com/project-messages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify(messageData)
+            body: JSON.stringify({ projectId, senderId, text: textToSend })
         });
     } catch (err) {
         console.error("Failed to POST message", err);
     }
   };
 
-  // --- 3. ВІДНОВЛЕНО: ЛОГІКА ЗАВАНТАЖЕННЯ ФАЙЛІВ ---
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -197,7 +180,7 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
     const token = localStorage.getItem('token');
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('folder', `group_chat_${roomId}`);
+    formData.append('folder', `project_chat_${projectId}`);
 
     try {
         const response = await fetch('https://backendfastline.onrender.com/storage/upload', {
@@ -211,7 +194,7 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
             const senderId = currentUser?.id || currentUser?.uid || currentUser?.email || "unknown";
             
             const messageData = { 
-                roomId: roomId, 
+                projectId: projectId, 
                 text: data.url, 
                 senderId: senderId,
                 senderName: currentUser?.name || currentUser?.email?.split('@')[0]
@@ -220,22 +203,22 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
             setMessages(prev => [...prev, { id: Date.now().toString(), text: data.url, senderId, isMe: true, timestamp: "now" }]);
             if (socket) socket.emit('send_message', messageData);
 
-            await fetch(`https://backendfastline.onrender.com/messages`, {
+            // POST для файла
+            await fetch(`https://backendfastline.onrender.com/project-messages`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(messageData)
+                body: JSON.stringify({ projectId, senderId, text: data.url })
             });
 
-            toast.success("File shared with group!");
+            toast.success("File shared with project!");
         } else { toast.error("Failed to upload attachment."); }
     } catch (err) { toast.error("Upload network error."); } 
     finally { setIsUploadingFile(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
   };
 
-  const handleDelete = (messageId) => { if (socket) socket.emit('delete_message', { roomId, messageId }); };
-  
+  const handleDelete = (messageId) => { if (socket) socket.emit('delete_message', { roomId: projectId, messageId }); };
   const handlePin = (msg) => {
-      if (socket) socket.emit('pin_message', { roomId, message: msg });
+      if (socket) socket.emit('pin_message', { roomId: projectId, message: msg });
       setPinnedMessage(msg);
       setActiveMenu(null);
       toast.success('Message pinned', { style: { background: '#1e1b2e', color: '#fff' }});
@@ -243,7 +226,7 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
 
   const copyToClipboard = (text) => {
       navigator.clipboard.writeText(text);
-      toast.success('Copied', { style: { background: '#1e1b2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }});
+      toast.success('Copied');
       setActiveMenu(null);
   }
 
@@ -266,7 +249,7 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
         }
         return m;
     }));
-    if (socket && roomId) socket.emit('add_reaction', { roomId, messageId: msgId, reactions: updatedReactions });
+    if (socket && projectId) socket.emit('add_reaction', { roomId: projectId, messageId: msgId, reactions: updatedReactions });
   };
 
   const getParticipantData = (senderId, fallbackName) => {
@@ -276,7 +259,7 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
   };
 
   return (
-    <div key={roomId} className="flex flex-col h-full bg-[#05060f] text-white relative">
+    <div key={projectId} className="flex flex-col h-full bg-[#05060f] text-white relative z-20">
       <Toaster position="top-center" />
       
       <style>
@@ -291,42 +274,41 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
         `}
       </style>
 
-      <ManageMembersModal 
-        isOpen={isManageModalOpen} onClose={() => setIsManageModalOpen(false)} roomId={roomId} groupName={groupName} participants={participants} currentUser={currentUser} refreshParticipants={fetchParticipants} onLeaveGroup={onBack}
-      />
-
-      {isGroupInfoOpen && (
+      {/* --- PROJECT INFO MODAL --- */}
+      {isProjectInfoOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsGroupInfoOpen(false)}></div>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsProjectInfoOpen(false)}></div>
             <div className="bg-[#101426] border border-white/10 rounded-[2rem] w-full max-w-sm shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-300">
                 <div className="flex justify-between items-start p-6 pb-0">
                     <div className="w-6 h-6"></div>
                     <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#6d28d9] to-[#3b82f6] flex items-center justify-center shadow-lg border-4 border-[#101426]">
-                        <Hash size={40} className="text-white" />
+                        <FolderKanban size={40} className="text-white" />
                     </div>
-                    <button onClick={() => setIsGroupInfoOpen(false)} className="text-gray-500 hover:text-white bg-white/5 p-1.5 rounded-full transition-colors"><X size={20} /></button>
+                    <button onClick={() => setIsProjectInfoOpen(false)} className="text-gray-500 hover:text-white bg-white/5 p-1.5 rounded-full transition-colors"><X size={20} /></button>
                 </div>
                 <div className="text-center px-6 pt-4 pb-6 border-b border-white/5">
-                    <h2 className="text-xl font-bold text-white tracking-tight mb-1">{groupName}</h2>
-                    <p className="text-sm text-[#a19bfe] font-medium">{participants.length > 0 ? `${participants.length} members` : 'Group chat'}</p>
+                    <h2 className="text-xl font-bold text-white tracking-tight mb-1">{projectName}</h2>
+                    <p className="text-sm text-[#a19bfe] font-medium">Project Workspace</p>
                     <div className="flex items-center justify-center gap-6 mt-6">
                         <div className="flex flex-col items-center gap-2 cursor-pointer group"><div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors"><BellOff size={20} className="text-gray-400 group-hover:text-white" /></div><span className="text-[10px] font-bold text-gray-500 group-hover:text-gray-300 uppercase">Mute</span></div>
-                        <div className="flex flex-col items-center gap-2 cursor-pointer group" onClick={() => { setIsGroupInfoOpen(false); setIsManageModalOpen(true); }}><div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors"><Settings size={20} className="text-gray-400 group-hover:text-white" /></div><span className="text-[10px] font-bold text-gray-500 group-hover:text-gray-300 uppercase">Manage</span></div>
+                        <div className="flex flex-col items-center gap-2 cursor-pointer group" onClick={onNavigateToDashboard}><div className="w-12 h-12 rounded-2xl bg-[#6d28d9]/20 flex items-center justify-center group-hover:bg-[#6d28d9]/40 transition-colors border border-[#6d28d9]/30"><LayoutDashboard size={20} className="text-[#a19bfe] group-hover:text-white" /></div><span className="text-[10px] font-bold text-gray-500 group-hover:text-gray-300 uppercase">Dashboard</span></div>
                         <div className="flex flex-col items-center gap-2 cursor-pointer group"><div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors"><MoreHorizontal size={20} className="text-gray-400 group-hover:text-white" /></div><span className="text-[10px] font-bold text-gray-500 group-hover:text-gray-300 uppercase">More</span></div>
                     </div>
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
-                    <div className="p-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors group">
-                        <div className="flex items-center gap-4"><LinkIcon size={20} className="text-[#6d28d9]" /><div><div className="text-sm font-medium text-white">fastline.app/c/{roomId?.substring(0,6) || "invite"}</div><div className="text-[11px] text-gray-500">Group invite link</div></div></div>
+                    <div className="p-4 border-b border-white/5 grid grid-cols-2 gap-y-4">
+                        <div className="flex items-center gap-3 cursor-pointer group"><ImageIcon size={18} className="text-gray-500 group-hover:text-[#3b82f6]" /><span className="text-sm text-gray-300 group-hover:text-white">Media</span></div>
+                        <div className="flex items-center gap-3 cursor-pointer group"><VideoIcon size={18} className="text-gray-500 group-hover:text-[#ec4899]" /><span className="text-sm text-gray-300 group-hover:text-white">Calls</span></div>
+                        <div className="flex items-center gap-3 cursor-pointer group"><File size={18} className="text-gray-500 group-hover:text-[#10b981]" /><span className="text-sm text-gray-300 group-hover:text-white">Documents</span></div>
+                        <div className="flex items-center gap-3 cursor-pointer group"><LinkIcon size={18} className="text-gray-500 group-hover:text-[#a19bfe]" /><span className="text-sm text-gray-300 group-hover:text-white">Links</span></div>
                     </div>
                     <div className="p-4">
-                        <div className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Users size={14}/> Members</div>
+                        <div className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Users size={14}/> Team Members</div>
                         <div className="space-y-1">
                             {participants.map((p, idx) => {
                                 const name = p.displayName || p.name || p.email?.split('@')[0] || "User";
                                 const isCreator = idx === 0; 
-                                const status = idx % 3 === 0 ? 'typing...' : idx % 2 === 0 ? 'online' : 'last seen recently';
-                                const statusColor = status === 'typing...' ? 'text-[#3b82f6]' : status === 'online' ? 'text-green-400' : 'text-gray-500';
+                                const status = idx % 3 === 0 ? 'online' : 'offline';
                                 return (
                                     <div key={idx} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 cursor-pointer transition-colors group/member">
                                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#1e2336] to-[#0a0b1e] border border-white/10 flex items-center justify-center text-white text-xs font-bold relative">
@@ -334,8 +316,8 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
                                             {status === 'online' && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-[#101426] rounded-full"></span>}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex justify-between items-center"><div className="text-sm font-bold text-gray-200 truncate group-hover/member:text-white">{name}</div>{isCreator && <span className="text-[9px] font-bold text-[#a19bfe] bg-[#6d28d9]/20 px-1.5 py-0.5 rounded border border-[#6d28d9]/30">ADMIN</span>}</div>
-                                            <div className={`text-[11px] truncate ${statusColor}`}>{status}</div>
+                                            <div className="flex justify-between items-center"><div className="text-sm font-bold text-gray-200 truncate group-hover/member:text-white">{name}</div>{isCreator && <span className="text-[9px] font-bold text-[#a19bfe] bg-[#6d28d9]/20 px-1.5 py-0.5 rounded border border-[#6d28d9]/30">OWNER</span>}</div>
+                                            <div className={`text-[11px] truncate ${status === 'online' ? 'text-green-400' : 'text-gray-500'}`}>{status === 'online' ? 'online' : 'last seen recently'}</div>
                                         </div>
                                     </div>
                                 );
@@ -347,23 +329,24 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
         </div>
       )}
 
-      {/* HEADER */}
+      {/* --- PROJECT HEADER --- */}
       <div className="h-[72px] px-6 border-b border-white/5 flex items-center justify-between bg-[#0a0f1e]/80 backdrop-blur-xl sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-3 shrink-0">
             <button onClick={onBack} className="text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 active:scale-90 p-2 rounded-full transition-all"><ArrowLeft size={18} /></button>
-            <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setIsGroupInfoOpen(true)}>
-                <div className="w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden shadow-lg bg-gradient-to-tr from-[#6d28d9] to-[#3b82f6] group-hover:scale-105 transition-transform"><Hash size={22} className="text-white"/></div>
+            <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setIsProjectInfoOpen(true)}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden shadow-lg bg-gradient-to-tr from-[#6d28d9] to-[#3b82f6] border border-white/10 group-hover:scale-105 transition-transform"><FolderKanban size={20} className="text-white"/></div>
                 <div className="flex flex-col ml-1">
-                    <h2 className="font-bold text-base text-white leading-tight tracking-wide group-hover:text-[#a19bfe] transition-colors">{groupName}</h2>
-                    <p className="text-[11px] text-gray-400 font-medium mt-0.5">{participants.length > 0 ? `${participants.length} members` : 'Group chat'}</p>
+                    <h2 className="font-bold text-base text-white leading-tight tracking-wide group-hover:text-[#a19bfe] transition-colors">{projectName}</h2>
+                    <p className="text-[11px] text-gray-400 font-medium mt-0.5">Project Team Chat</p>
                 </div>
             </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-            <button onClick={() => toast("Call feature coming soon!", {icon: '📞'})} className="hidden md:flex items-center gap-2 text-gray-400 hover:text-white hover:bg-white/10 active:scale-95 px-3 py-2 rounded-xl transition-all text-xs font-bold"><Phone size={16} /></button>
-            <button onClick={() => toast("Video feature coming soon!", {icon: '🎥'})} className="hidden md:flex items-center gap-2 text-gray-400 hover:text-white hover:bg-white/10 active:scale-95 px-3 py-2 rounded-xl transition-all text-xs font-bold"><VideoIcon size={16} /></button>
+            <button onClick={onNavigateToDashboard} className="hidden md:flex items-center gap-2 bg-[#6d28d9]/10 border border-[#6d28d9]/20 text-[#a19bfe] hover:text-white hover:bg-[#6d28d9]/30 active:scale-95 px-3 py-2 rounded-xl transition-all text-xs font-bold"><LayoutDashboard size={16} /> Dashboard</button>
             <div className="w-px h-6 bg-white/10 mx-1 hidden md:block"></div>
-            <button onClick={() => setIsGroupInfoOpen(true)} className="flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-95 w-10 h-10 rounded-xl transition-all"><MoreVertical size={18} /></button>
+            <button onClick={() => toast("Call feature coming soon!", {icon: '📞'})} className="hidden md:flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-95 w-10 h-10 rounded-xl transition-all"><Phone size={18} /></button>
+            <button onClick={() => toast("Video feature coming soon!", {icon: '🎥'})} className="hidden md:flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-95 w-10 h-10 rounded-xl transition-all"><VideoIcon size={18} /></button>
+            <button onClick={() => setIsProjectInfoOpen(true)} className="flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-95 w-10 h-10 rounded-xl transition-all"><MoreVertical size={18} /></button>
         </div>
       </div>
 
@@ -372,11 +355,11 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
             <div className="flex items-center gap-3 overflow-hidden text-sm">
                 <Pin size={16} className="text-[#a19bfe] shrink-0" />
                 <div className="flex flex-col truncate border-l-2 border-[#6d28d9] pl-3">
-                    <span className="text-[#a19bfe] font-bold text-[10px] leading-none mb-1 uppercase tracking-widest">Pinned Message</span>
+                    <span className="text-[#a19bfe] font-bold text-[10px] leading-none mb-1 uppercase tracking-widest">Pinned Task / Message</span>
                     <span className="text-gray-200 truncate text-xs">{pinnedMessage.text}</span>
                 </div>
             </div>
-            <button onClick={() => { setPinnedMessage(null); if (socket) socket.emit('unpin_message', { roomId }); }} className="text-gray-500 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"><X size={14}/></button>
+            <button onClick={() => { setPinnedMessage(null); if (socket) socket.emit('unpin_message', { roomId: projectId }); }} className="text-gray-500 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"><X size={14}/></button>
         </div>
       )}
 
@@ -394,14 +377,12 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
            const isMe = msg.isMe;
            const sender = getParticipantData(msg.senderId, msg.senderName);
            const isSequential = index > 0 && messages[index - 1].senderId === msg.senderId && !messages[index - 1].isSystem;
-           
            const showAvatarAndName = !isMe && !isSequential;
 
            return (
              <div key={msg.id} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} group msg-enter ${isSequential ? 'mt-1' : 'mt-5'}`}>
                 <div className={`flex max-w-[85%] md:max-w-[70%] gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'} relative`}>
                     
-                    {/* АВАТАРКА */}
                     {!isMe && (
                         <div className="flex-shrink-0 mt-0 w-10 flex flex-col justify-start pt-1"> 
                             {showAvatarAndName ? (
@@ -418,9 +399,10 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
                         
                         <div className={`px-5 py-3 text-[15px] leading-relaxed relative group/bubble transition-all ${isMe ? 'bg-gradient-to-br from-[#6d28d9] to-[#5b21b6] text-white rounded-2xl rounded-tr-sm shadow-md' : `bg-[#161b33] text-gray-100 rounded-2xl rounded-tl-sm border border-white/5 shadow-sm ${showAvatarAndName ? 'pt-2.5' : 'pt-3'}`}`}>
                             
-                            {/* --- НІКНЕЙМ ВСЕРЕДИНІ БУЛЬБАШКИ --- */}
                             {showAvatarAndName && (
-                                <div className="text-[12px] font-bold text-[#a19bfe] mb-1.5 leading-none">{sender.name}</div>
+                                <div className="text-[12px] font-bold text-[#a19bfe] mb-1.5 leading-none flex items-center gap-1.5">
+                                    {sender.name}
+                                </div>
                             )}
 
                             {msg.replyTo && (
@@ -430,12 +412,11 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
                                 </div>
                             )}
                             
-                            {/* --- РОЗУМНИЙ МЕДІА-РЕНДЕРЕР --- */}
                             <span className="break-words block">
                                 {isImageUrl(msg.text) ? (
                                     <img 
                                       src={msg.text} 
-                                      alt="Group Media" 
+                                      alt="Project Media" 
                                       className="max-w-full max-h-64 rounded-xl mt-1.5 object-cover border border-white/10 shadow-md cursor-pointer hover:opacity-95 transition-opacity"
                                       onClick={() => window.open(msg.text, '_blank')} 
                                     />
@@ -443,8 +424,8 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
                                     <a href={msg.text} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-[#060813]/60 hover:bg-[#060813]/90 border border-white/5 p-3 rounded-xl mt-1.5 transition-all text-[#a19bfe] hover:text-white group/file">
                                         <div className="w-8 h-8 rounded-lg bg-[#a19bfe]/10 flex items-center justify-center text-[#a19bfe] group-hover/file:bg-[#a19bfe]/20 shrink-0"><FileText size={16}/></div>
                                         <div className="min-w-0 flex-1">
-                                            <p className="text-xs font-bold text-gray-300 truncate">Shared Document</p>
-                                            <p className="text-[10px] text-gray-500 truncate">Click to open or download</p>
+                                            <p className="text-xs font-bold text-gray-300 truncate">Shared Project File</p>
+                                            <p className="text-[10px] text-gray-500 truncate">Click to open</p>
                                         </div>
                                     </a>
                                 ) : (
@@ -480,14 +461,14 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
                             </div>
                         </div>
 
-                        <div className={`flex flex-wrap items-center gap-1.5 mt-1 px-1 ${isMe ? 'flex-row' : 'flex-row'}`}>
+                        <div className={`flex flex-wrap items-center gap-1.5 mt-1 px-1 w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
+                            <span className="text-[10px] text-gray-500 font-medium">{msg.timestamp}</span>
+                            {msg.isEdited && <span className="text-[9px] text-gray-500 italic">edited</span>}
                             {isMe && (
                                 <div className="flex items-center opacity-80">
                                     {msg.read ? <CheckCheck size={14} className="text-[#3b82f6]" /> : <Check size={14} className="text-gray-500" />}
                                 </div>
                             )}
-                            <span className="text-[10px] text-gray-500 font-medium">{msg.timestamp}</span>
-                            {msg.isEdited && <span className="text-[9px] text-gray-500 italic">edited</span>}
                             
                             {msg.reactions?.length > 0 && (
                                 <div className={`flex flex-wrap gap-1 ml-2`}>
@@ -505,7 +486,7 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
         <div ref={messagesEndRef} className="h-2" />
       </div>
 
-      {/* INPUT AREA */}
+      {/* --- INPUT AREA --- */}
       <div className="bg-[#0a0f1e]/90 backdrop-blur-2xl border-t border-white/5 p-4 z-20 relative shrink-0 w-full">
         {(replyingTo || editingMessage) && (
             <div className="max-w-4xl mx-auto w-full mb-3 px-4 py-2.5 bg-[#161b33] border border-white/5 rounded-xl flex items-center justify-between animate-in slide-in-from-bottom-2 fade-in">
@@ -513,7 +494,7 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
                     {editingMessage ? <Edit2 size={16} className="text-[#a19bfe] shrink-0" /> : <Reply size={16} className="text-[#a19bfe] shrink-0" />}
                     <div className="flex flex-col truncate border-l-2 border-[#6d28d9] pl-3">
                         <span className="text-[#a19bfe] font-bold text-[11px] leading-none mb-1 uppercase tracking-wider">
-                            {editingMessage ? "Editing Message" : `Replying to ${replyingTo.senderName}`}
+                            {editingMessage ? "Editing Task/Message" : `Replying to ${replyingTo.senderName}`}
                         </span>
                         <span className="text-gray-300 truncate text-[12px]">{editingMessage ? editingMessage.text : replyingTo.text}</span>
                     </div>
@@ -527,18 +508,13 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
                 
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden custom-file-input" />
                 
-                <button 
-                  type="button" 
-                  onClick={() => fileInputRef.current?.click()} 
-                  disabled={isUploadingFile}
-                  className="p-2.5 text-gray-500 hover:text-[#a19bfe] transition-colors rounded-xl hover:bg-white/5 disabled:opacity-50"
-                >
+                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploadingFile} className="p-2.5 text-gray-500 hover:text-[#a19bfe] transition-colors rounded-xl hover:bg-white/5 disabled:opacity-50">
                     {isUploadingFile ? <Loader2 className="animate-spin text-[#a19bfe]" size={20} /> : <ImageIcon size={20} />}
                 </button>
 
                 <input 
                     className="flex-1 bg-transparent outline-none text-white text-[15px] px-2 py-2.5 h-12 placeholder-gray-500 min-w-0" 
-                    placeholder={isUploadingFile ? "Uploading media..." : editingMessage ? "Edit message..." : `Message ${groupName}...`} 
+                    placeholder={isUploadingFile ? "Uploading file..." : editingMessage ? "Edit message..." : `Message ${projectName} team...`} 
                     value={input} 
                     onChange={(e) => setInput(e.target.value)} 
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
@@ -547,12 +523,7 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
                 />
                 
                 <div className="flex items-center gap-1 pr-1">
-                    <button 
-                      type="button" 
-                      onClick={() => fileInputRef.current?.click()} 
-                      disabled={isUploadingFile}
-                      className="p-2.5 text-gray-500 hover:text-[#a19bfe] transition-colors rounded-xl hover:bg-white/5 disabled:opacity-50"
-                    >
+                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploadingFile} className="p-2.5 text-gray-500 hover:text-[#a19bfe] transition-colors rounded-xl hover:bg-white/5 disabled:opacity-50">
                         <Paperclip size={20} />
                     </button>
                     {input.trim() || editingMessage ? (
@@ -572,4 +543,4 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
   );
 };
 
-export default GroupChatArea;
+export default ProjectChatArea;
