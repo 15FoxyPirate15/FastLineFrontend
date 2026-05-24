@@ -7,6 +7,36 @@ const isImageUrl = (text) => {
   return text.startsWith('http') && (text.match(/\.(jpeg|jpg|gif|png|webp)/i) || text.includes('cloudinary'));
 };
 
+// Куленепробивна перевірка ID автора
+const getSenderId = (m) => {
+    if (!m) return "unknown";
+    const raw = m.senderId || m.from || m.userId || m.senderEmail || m.sender 
+              || m.author || m.uid || m.createdBy || m.owner || m.userID || m.user_id;
+    if (typeof raw === 'object' && raw !== null) {
+        return String(raw._id || raw.id || raw.uid || raw.email || raw.name || "unknown");
+    }
+    return String(raw || "unknown");
+};
+
+const checkIsMe = (senderStr, currentUser) => {
+    if (!senderStr || senderStr === "undefined" || senderStr === "unknown" || senderStr === "null") return false;
+    if (!currentUser) return false;
+
+    const s = String(senderStr).toLowerCase().trim();
+
+    // Перевіряємо всі можливі варіанти ідентифікатора, не звертаючи увагу на регістр
+    const candidates = [
+        currentUser?.id,
+        currentUser?.uid,
+        currentUser?._id,
+        currentUser?.email,
+        currentUser?.name,
+        currentUser?.full_name,
+    ];
+
+    return candidates.some(c => c && String(c).toLowerCase().trim() === s);
+};
+
 const ChatArea = ({ chatName = "User", currentUser, onBack, socket, roomId }) => { 
   const [replyingTo, setReplyingTo] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
@@ -22,6 +52,11 @@ const ChatArea = ({ chatName = "User", currentUser, onBack, socket, roomId }) =>
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const fileInputRef = useRef(null);
 
+  // ВИПРАВЛЕННЯ 1: Стабільний рядковий ідентифікатор поточного юзера
+  // Замість об'єкта currentUser у deps (що викликало нескінченні ре-рендери),
+  // використовуємо стабільний рядок.
+  const currentUserId = currentUser?.id || currentUser?.uid || currentUser?._id || currentUser?.email || null;
+
   useEffect(() => {
     const handleGlobalClick = () => { if (activeMenu) setActiveMenu(null); };
     document.addEventListener('mousedown', handleGlobalClick);
@@ -30,7 +65,8 @@ const ChatArea = ({ chatName = "User", currentUser, onBack, socket, roomId }) =>
 
   // --- 1. POLLING (Синхронізація з базою) ---
   useEffect(() => {
-    if (!roomId) return;
+    // ВИПРАВЛЕННЯ 2: Не запускаємо polling, якщо currentUser ще не завантажився
+    if (!roomId || !currentUserId) return;
 
     const fetchHistory = async () => {
         try {
@@ -43,13 +79,25 @@ const ChatArea = ({ chatName = "User", currentUser, onBack, socket, roomId }) =>
             const history = await res.json();
             
             if (Array.isArray(history)) {
+                // ВИПРАВЛЕННЯ 3: Логування для дебагу невідповідності полів
+                // (можна прибрати після підтвердження що все працює)
+                if (history.length > 0) {
+                    console.log("[ChatArea] FULL message:", JSON.stringify(history[0]));
+                    console.log("[ChatArea] currentUser:", currentUser);
+                    console.log("[ChatArea] Sample message raw fields:", {
+                        senderId: history[0]?.senderId,
+                        from: history[0]?.from,
+                        userId: history[0]?.userId,
+                        senderEmail: history[0]?.senderEmail,
+                        sender: history[0]?.sender,
+                    });
+                    console.log("[ChatArea] getSenderId result:", getSenderId(history[0]));
+                    console.log("[ChatArea] checkIsMe result:", checkIsMe(getSenderId(history[0]), currentUser));
+                }
+
                 const formattedMessages = history.filter(Boolean).map(m => {
-                    const backendSender = String(m.from || m.senderId || m.userId || m.senderEmail || m.sender || "unknown");
-                    const myId = String(currentUser?.id || currentUser?.uid || "unknown");
-                    const myEmail = String(currentUser?.email || "unknown");
-                    
-                    const isMyMessage = (backendSender !== "undefined" && backendSender !== "unknown" && backendSender !== "null") && 
-                                        (backendSender === myId || backendSender === myEmail);
+                    const backendSender = getSenderId(m);
+                    const isMyMessage = checkIsMe(backendSender, currentUser);
                     
                     let timeString = "now";
                     if (m.createdAt) {
@@ -58,7 +106,7 @@ const ChatArea = ({ chatName = "User", currentUser, onBack, socket, roomId }) =>
                     }
                     
                     return {
-                        id: m.id || Math.random().toString(), 
+                        id: m.id || m._id || Math.random().toString(), 
                         text: m.text || m.message || m.content || m.body || "Empty",
                         senderId: backendSender, 
                         isMe: isMyMessage, 
@@ -71,15 +119,19 @@ const ChatArea = ({ chatName = "User", currentUser, onBack, socket, roomId }) =>
                     }
                 });
 
-                // Розумне оновлення стейту, щоб уникнути блимання
                 setMessages(prev => {
-                    if (prev.length !== formattedMessages.length) return formattedMessages;
-                    const lastPrev = prev[prev.length - 1];
-                    const lastNew = formattedMessages[formattedMessages.length - 1];
-                    if (lastPrev && lastNew && (lastPrev.text !== lastNew.text || lastPrev.id !== lastNew.id)) {
-                        return formattedMessages;
+                    const dbTexts = new Set(formattedMessages.map(m => m.text));
+                    const pendingTempMessages = prev.filter(m => 
+                        String(m.id).startsWith('temp_') && !dbTexts.has(m.text)
+                    );
+                    const newMessagesArray = [...formattedMessages, ...pendingTempMessages];
+
+                    if (prev.length === newMessagesArray.length) {
+                        const lastPrev = prev[prev.length - 1];
+                        const lastNew = newMessagesArray[newMessagesArray.length - 1];
+                        if (lastPrev?.id === lastNew?.id && lastPrev?.text === lastNew?.text) return prev;
                     }
-                    return prev;
+                    return newMessagesArray;
                 });
             }
         } catch (err) {
@@ -90,7 +142,9 @@ const ChatArea = ({ chatName = "User", currentUser, onBack, socket, roomId }) =>
     fetchHistory();
     const pollingInterval = setInterval(fetchHistory, 3000);
     return () => clearInterval(pollingInterval);
-  }, [roomId, currentUser]);
+
+  // ВИПРАВЛЕННЯ 4: Використовуємо стабільний currentUserId замість об'єкта currentUser
+  }, [roomId, currentUserId]);
 
   // --- 2. SOCKET (Реалтайм) ---
   useEffect(() => {
@@ -101,33 +155,24 @@ const ChatArea = ({ chatName = "User", currentUser, onBack, socket, roomId }) =>
       if (backendMessage.roomId !== roomId) return;
       
       setMessages(prev => {
-        // Якщо бекенд надіслав повідомлення з ID, і ми його вже маємо - ігноруємо
-        const msgId = backendMessage.id || backendMessage._id;
-        if (msgId && prev.some(m => m.id === msgId)) return prev;
+        const msgId = String(backendMessage.id || backendMessage._id);
+        if (msgId && prev.some(m => String(m.id) === msgId)) return prev;
 
-        // Жорстка перевірка автора, щоб не було багу "всі повідомлення мої"
-        const backendSender = String(backendMessage.senderId || backendMessage.from || backendMessage.userId || "unknown");
-        const myId = String(currentUser?.id || currentUser?.uid || "unknown");
-        const myEmail = String(currentUser?.email || "unknown");
-        
-        const isMe = (backendSender !== "undefined" && backendSender !== "unknown" && backendSender !== "null") && 
-                     (backendSender === myId || backendSender === myEmail);
-        
-        // Дедуплікація: Якщо це моє повідомлення і воно вже є на екрані (tempMsg) - ігноруємо копію з сокету
-        if (isMe && prev.some(m => m.isMe && m.text === backendMessage.text)) {
-            return prev;
-        }
+        const filteredPrev = prev.filter(m => !(String(m.id).startsWith('temp_') && m.text === backendMessage.text));
 
+        const backendSender = getSenderId(backendMessage);
+        const isMe = checkIsMe(backendSender, currentUser);
+        
         const safeId = msgId || Math.random().toString();
         let timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        return [...prev, { ...backendMessage, id: safeId, isMe, read: false, timestamp: timeString }];
+        return [...filteredPrev, { ...backendMessage, id: safeId, isMe, read: false, timestamp: timeString }];
       });
     };
 
     socket.on('new_message', handleNewMessage);
     return () => socket.off('new_message', handleNewMessage);
-  }, [socket, roomId, currentUser]);
+  }, [socket, roomId, currentUserId]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
@@ -156,7 +201,6 @@ const ChatArea = ({ chatName = "User", currentUser, onBack, socket, roomId }) =>
         replyTo: replyingTo ? { senderName: replyingTo.senderName || chatName, text: replyingTo.text } : null 
     };
 
-    // Одразу малюємо локально
     const tempMsg = {
         id: `temp_${Date.now()}`,
         text: textToSend,
@@ -165,8 +209,6 @@ const ChatArea = ({ chatName = "User", currentUser, onBack, socket, roomId }) =>
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setMessages(prev => [...prev, tempMsg]);
-
-    if (socket) socket.emit('send_message', messageData);
 
     try {
         const token = localStorage.getItem('token');
@@ -209,8 +251,6 @@ const ChatArea = ({ chatName = "User", currentUser, onBack, socket, roomId }) =>
               };
               
               setMessages(prev => [...prev, { id: `temp_${Date.now()}`, text: data.url, senderId, isMe: true, timestamp: "now" }]);
-
-              if(socket) socket.emit('send_message', messageData);
 
               await fetch(`https://backendfastline.onrender.com/messages`, {
                   method: 'POST',

@@ -275,46 +275,46 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
                     )}
                 </button>
 
-                {/* РЕАЛЬНІ СПОВІЩЕННЯ З БЕКЕНДУ */}
-                {isNotificationsOpen && (
-                    <div className="fixed top-20 right-5 w-80 max-w-[90vw] bg-[#161b33]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_10px_50px_rgba(0,0,0,0.5)] z-[999] overflow-hidden animate-in fade-in slide-in-from-top-4 duration-200">
-                        <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-[#6d28d9]/10 to-transparent">
-                            <h3 className="text-sm font-black text-white uppercase tracking-widest">Notifications</h3>
-                            {unreadCount > 0 && (
-                                <button onClick={handleMarkAllAsRead} className="flex items-center gap-1 text-[#a19bfe] hover:text-white text-[10px] font-bold px-2 py-0.5 rounded-md border border-transparent hover:border-[#6d28d9]/30 transition-all bg-white/5">
-                                    <CheckCheck size={12}/> Mark all read
-                                </button>
-                            )}
-                        </div>
-                        <div className="max-h-80 overflow-y-auto custom-scrollbar p-2">
-                            {notifications.length === 0 ? (
-                                <div className="text-center py-8 text-xs text-gray-500 italic">No new notifications.</div>
-                            ) : (
-                                notifications.map(notif => (
-                                    <div 
-                                      key={notif.id} 
-                                      onClick={() => !notif.read && handleMarkAsRead(notif.id)}
-                                      className={`p-3 rounded-xl border transition-colors mb-2 last:mb-0 cursor-pointer group relative ${notif.read ? 'bg-[#0a0f1e]/40 border-white/5 hover:border-white/10 opacity-70' : 'bg-[#6d28d9]/10 border-[#6d28d9]/30 hover:bg-[#6d28d9]/20'}`}
-                                    >
-                                        <button onClick={(e) => handleDeleteNotification(notif.id, e)} className="absolute top-2 right-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><X size={14}/></button>
-                                        <div className="flex items-start gap-3">
-                                            <div className="w-10 h-10 rounded-lg bg-black/20 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
-                                                {getNotificationIcon(notif.type)}
-                                            </div>
-                                            <div className="flex-1 min-w-0 pr-4">
-                                                <p className="text-xs text-white font-bold mb-0.5 truncate">{notif.title}</p>
-                                                <p className="text-[11px] text-gray-300 leading-snug line-clamp-2">{notif.body}</p>
-                                                <span className="text-[9px] text-gray-500 font-bold mt-1.5 block">
-                                                    {notif.createdAt ? new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'now'}
-                                                </span>
-                                            </div>
-                                        </div>
+{/* РЕАЛЬНІ СПОВІЩЕННЯ З БЕКЕНДУ */}
+        {isNotificationsOpen && (
+            <div className="absolute top-full mt-4 -left-4 w-[320px] bg-[#161b33]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.7)] z-[999] overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-left">
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-[#6d28d9]/10 to-transparent">
+                    <h3 className="text-sm font-black text-white uppercase tracking-widest">Notifications</h3>
+                    {unreadCount > 0 && (
+                        <button onClick={handleMarkAllAsRead} className="flex items-center gap-1 text-[#a19bfe] hover:text-white text-[10px] font-bold px-2 py-0.5 rounded-md border border-transparent hover:border-[#6d28d9]/30 transition-all bg-white/5">
+                            <CheckCheck size={12}/> Mark all read
+                        </button>
+                    )}
+                </div>
+                <div className="max-h-80 overflow-y-auto custom-scrollbar p-2">
+                    {notifications.length === 0 ? (
+                        <div className="text-center py-8 text-xs text-gray-500 italic">No new notifications.</div>
+                    ) : (
+                        notifications.map(notif => (
+                            <div 
+                              key={notif.id} 
+                              onClick={() => !notif.read && handleMarkAsRead(notif.id)}
+                              className={`p-3 rounded-xl border transition-colors mb-2 last:mb-0 cursor-pointer group relative ${notif.read ? 'bg-[#0a0f1e]/40 border-white/5 hover:border-white/10 opacity-70' : 'bg-[#6d28d9]/10 border-[#6d28d9]/30 hover:bg-[#6d28d9]/20'}`}
+                            >
+                                <button onClick={(e) => handleDeleteNotification(notif.id, e)} className="absolute top-2 right-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><X size={14}/></button>
+                                <div className="flex items-start gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-black/20 flex items-center justify-center shrink-0 border border-white/5 shadow-inner">
+                                        {getNotificationIcon(notif.type)}
                                     </div>
-                                ))
-                            )}
-                        </div>
-                    </div>
-                )}
+                                    <div className="flex-1 min-w-0 pr-4">
+                                        <p className="text-xs text-white font-bold mb-0.5 truncate">{notif.title}</p>
+                                        <p className="text-[11px] text-gray-300 leading-snug line-clamp-2">{notif.body}</p>
+                                        <span className="text-[9px] text-gray-500 font-bold mt-1.5 block">
+                                            {notif.createdAt ? new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'now'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        )}
             </div>
 
             <button onClick={() => handleNavigation('contacts')} className="p-2.5 bg-[#101426] hover:bg-[#1a1f3c] border border-white/5 hover:border-[#6d28d9]/50 rounded-xl text-[#a19bfe] hover:text-white transition-all shadow-inner group shrink-0" title="Contacts">
