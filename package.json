@@ -13,6 +13,7 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+<<<<<<< HEAD
     "firebase": "^12.13.0",
     "lucide-react": "^0.554.0",
     "react": "^19.2.0",
@@ -20,6 +21,11 @@
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.13.0",
     "socket.io-client": "^4.8.3"
+=======
+    "lucide-react": "^0.554.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+>>>>>>> 6177455093f7fec61a5cef28758f30915ee7d335
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

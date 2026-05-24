@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { PhoneCall, Calendar as CalendarIcon, Link as LinkIcon, Plus, Home, Copy, Clock, Users, Shield, Timer, FolderKanban, X, Video } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
@@ -312,4 +313,16 @@ const CallsPage = ({ onNavigate }) => {
   );
 };
 
+=======
+import React from 'react';
+import { PhoneCall } from 'lucide-react';
+
+const CallsPage = () => (
+  <div className="flex-1 flex flex-col items-center justify-center p-8 text-white text-center animate-message">
+    <PhoneCall size={64} className="text-green-400 mb-6" />
+    <h2 className="text-3xl font-bold mb-3">Scheduled Calls</h2>
+    <p className="text-gray-400 max-w-md">Review upcoming and past voice/video calls.</p>
+  </div>
+);
+>>>>>>> 6177455093f7fec61a5cef28758f30915ee7d335
 export default CallsPage;
