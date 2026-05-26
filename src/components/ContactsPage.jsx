@@ -122,40 +122,40 @@ const ContactsPage = ({ onNavigate, onStartChat, currentUser }) => {
 
   useEffect(() => { fetchContacts(); }, [currentUser]);
 
-  // ── ADD ────────────────────────────────────────────────
-  // POST /contacts/add  { userId, targetIdentifier }
-  const handleAddContact = async (targetIdentifier) => {
-    setIsAddingContact(true);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API}/contacts/add`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ userId: getUserId(), targetIdentifier })
-      });
+const handleAddContact = async (targetIdentifier) => {
+  console.log('currentUser:', JSON.stringify(currentUser));
+  if (!targetIdentifier) return toast.error('Введіть @тег або email');
 
-      const data = await res.json();
+  const userId = currentUser?.id || currentUser?.uid || currentUser?._id || currentUser?.email;
 
-      if (res.ok) {
-        toast.success(data.message || 'Контакт додано!');
-        setIsAddModalOpen(false);
-        // Одразу додаємо в стейт без зайвого запиту (бекенд повертає { contact: {...} })
-        if (data.contact) {
-          setContacts(prev => [...prev, data.contact]);
-        } else {
-          fetchContacts();
-        }
-      } else {
-        // Бекенд повертає { message: '...' } для всіх помилок (BadRequest, NotFound тощо)
-        toast.error(data.message || 'Не вдалося додати контакт');
-      }
-    } catch (err) {
-      toast.error('Помилка мережі');
-    } finally {
-      setIsAddingContact(false);
+  if (!userId) {
+    toast.error('Session error: Could not identify your user ID. Try re-logging.');
+    return;
+  }
+
+  setIsAddingContact(true); // ← було isAddingUser (не існує)
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API}/contacts/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ userId, targetIdentifier }) // ← аргумент, не searchQuery
+    });
+
+    if (res.ok) {
+      toast.success('Контакт додано!');
+      setIsAddModalOpen(false); // ← закриваємо модалку
+      fetchContacts();
+    } else {
+      const err = await res.json();
+      toast.error(err.message || 'Не вдалося додати контакт');
     }
-  };
-
+  } catch (err) {
+    toast.error('Помилка мережі');
+  } finally {
+    setIsAddingContact(false); // ← було isAddingUser
+  }
+};
   // ── DELETE ─────────────────────────────────────────────
   // DELETE /contacts/:userId/:contactId
   const handleRemoveContact = async (contactId, e) => {

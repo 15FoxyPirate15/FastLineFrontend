@@ -160,7 +160,14 @@ function App() {
       case 'calendar': return <CalendarPage onNavigate={handleNavigate} />;
       case 'calls': return <CallsPage onNavigate={handleNavigate} />;
       case 'tasks': return <TasksPage onNavigate={handleNavigate} currentUser={user} />;
-      case 'contacts': return <ContactsPage onNavigate={handleNavigate} onStartChat={(targetUser) => { setSelectedChatUser(targetUser); handleNavigate('chat_direct'); }} />;
+      case 'contacts': return <ContactsPage 
+      onNavigate={handleNavigate} 
+      currentUser={user}  // ← додай це
+      onStartChat={(targetUser) => { 
+        setSelectedChatUser(targetUser); 
+        handleNavigate('chat_direct'); 
+      }} 
+/>;
       case 'meetings': return <MeetingsPage onNavigate={handleNavigate} />;
       case 'projects': return <ProjectsPage onNavigate={handleNavigate} currentUser={user} />;
       case 'project_chat':

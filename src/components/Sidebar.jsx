@@ -99,46 +99,60 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
       } catch (err) { console.error("Notifications fetch error", err); }
   };
 
-  const fetchAllData = async () => {
+const fetchAllData = async () => {
     if (!currentUser) return;
     setIsLoadingChats(true);
     try {
         const token = localStorage.getItem('token');
         const userId = currentUser.id || currentUser.uid || currentUser.email;
 
-        // Чати
-        const chatsRes = await fetch(`https://backendfastline.onrender.com/chats/user/${currentUser.email}`, { headers: { 'Authorization': `Bearer ${token}` }});
+        const chatsRes = await fetch(`https://backendfastline.onrender.com/chats/user/${currentUser.email}`, { 
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
         if (chatsRes.ok) {
             const data = await chatsRes.json();
+            console.log("Бекенд віддав такі чати:", data);
+
             if (Array.isArray(data)) {
                 const dChats = []; const gChats = [];
+                
                 data.forEach(chat => {
-                    let timeString = "";
-                    const timeSource = chat.lastMessage?.sentAt || chat.createdAt;
-                    if (timeSource) {
-                        const dateObj = timeSource._seconds ? new Date(timeSource._seconds * 1000) : new Date(timeSource);
-                        timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    }
-                    if (chat.type === 'group' || chat.type === 'project') {
-                        gChats.push({ id: chat.id, name: chat.name || "Unnamed Group", subtitle: chat.lastMessage?.text || "No messages yet", time: timeString });
-                    } else {
-                        let otherUserEmail = "Unknown User";
-                        if (chat.participants && Array.isArray(chat.participants)) {
-                            otherUserEmail = chat.participants.find(email => email !== currentUser.email) || chat.participants[0];
-                        }
-                        const chatName = chat.name || chat.full_name || otherUserEmail.split('@')[0];
-                        dChats.push({ id: chat.id, name: chatName, email: otherUserEmail, subtitle: chat.lastMessage?.text || "No messages yet", time: timeString });
+                    // Розрахунок часу
+                    const timeSource = chat.lastMessage?.timestamp || chat.createdAt?._seconds * 1000 || Date.now();
+                    const timeString = new Date(timeSource).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                    // Логіка для ПРИВАТНИХ ЧАТІВ
+                    if (chat.type === 'private') {
+                        // Знаходимо партнера, який не є поточним юзером
+                        const partner = chat.participants.find(p => p.email !== currentUser.email);
+                        dChats.push({ 
+                            id: chat.id, 
+                            name: chat.name || partner?.displayName || partner?.email?.split('@')[0] || "Unknown",
+                            email: partner?.email || "Unknown",
+                            subtitle: chat.lastMessage?.text || "No messages yet", 
+                            time: timeString 
+                        });
+                    } 
+                    // Логіка для ГРУП / ПРОЕКТІВ
+                    else {
+                        gChats.push({ 
+                            id: chat.id, 
+                            name: chat.name || "Unnamed Group", 
+                            subtitle: chat.lastMessage?.text || "No messages yet", 
+                            time: timeString 
+                        });
                     }
                 });
-                setDirectChats(dChats); setGroupChats(gChats);
+                
+                setDirectChats(dChats); 
+                setGroupChats(gChats);
             }
         }
 
-        // Проєкти
         const projRes = await fetch(`https://backendfastline.onrender.com/projects?userId=${encodeURIComponent(userId)}`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (projRes.ok) setProjects(await projRes.json());
 
-        // Завантажуємо сповіщення один раз при старті
         await fetchNotificationsData();
 
     } catch (err) { console.error("Data loading error:", err); } 
@@ -293,7 +307,19 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
                         notifications.map(notif => (
                             <div 
                               key={notif.id} 
-                              onClick={() => !notif.read && handleMarkAsRead(notif.id)}
+                              onClick={() => {
+                              // 1. Позначаємо як прочитане
+                              if (!notif.read) handleMarkAsRead(notif.id);
+                              
+                              // 2. Реалізуємо навігацію залежно від типу
+                              if (notif.data && notif.data.roomId) {
+                                  // Якщо це повідомлення, переходимо в чат
+                                  // Вам потрібно викликати функцію, яка відкриває чат (наприклад, onStartChat)
+                                  onStartChat({ id: notif.data.roomId, name: notif.title }); 
+                              }
+                              // Закриваємо меню сповіщень
+                              setIsNotificationsOpen(false);
+                          }}
                               className={`p-3 rounded-xl border transition-colors mb-2 last:mb-0 cursor-pointer group relative ${notif.read ? 'bg-[#0a0f1e]/40 border-white/5 hover:border-white/10 opacity-70' : 'bg-[#6d28d9]/10 border-[#6d28d9]/30 hover:bg-[#6d28d9]/20'}`}
                             >
                                 <button onClick={(e) => handleDeleteNotification(notif.id, e)} className="absolute top-2 right-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><X size={14}/></button>
