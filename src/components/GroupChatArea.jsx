@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Users, ArrowLeft, ArrowRight, X, Reply, Smile, CheckCheck, Check, MoreVertical, Edit2, Trash2, Copy, Hash, Phone, Video as VideoIcon, Pin, Image as ImageIcon, Paperclip, Mic, BellOff, Settings, MoreHorizontal, Link as LinkIcon, Loader2, FileText, Search, ExternalLink } from 'lucide-react';
+import { Users, ArrowLeft, ArrowRight, X, Reply, Smile, CheckCheck, Check, MoreVertical, Edit2, Trash2, Copy, Hash, Phone, Video as VideoIcon, Pin, Image as ImageIcon, Paperclip, Mic, BellOff, Settings, MoreHorizontal, Link as LinkIcon, Loader2, FileText, Search, ExternalLink, Play, Pause, Square } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import { createPortal } from 'react-dom';
 import ManageMembersModal from './ManageMembersModal';
 
 const API_BASE = 'https://backendfastline.onrender.com';
@@ -31,6 +32,36 @@ const checkIsMe = (senderStr, currentUser) => {
   return candidates.some(c => c && String(c).toLowerCase().trim() === s);
 };
 
+  const renderReplyPreview = (replyData) => {
+    if (!replyData) return null;
+    const fileData = replyData.fileData;
+    const mediaType = replyData.mediaType;
+
+    if (mediaType === 'image' || fileData?.type?.startsWith('image')) {
+      return (
+        <div className="flex items-center gap-2">
+          <img src={fileData?.url || replyData.text} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
+          <span className="truncate">Фото</span>
+        </div>
+      );
+    }
+    if (mediaType === 'video' || fileData?.type?.startsWith('video')) {
+      return (
+        <div className="flex items-center gap-1.5">
+          <VideoIcon size={14} />
+          <span className="truncate">Відео</span>
+        </div>
+      );
+    }
+    if (mediaType === 'audio' || fileData?.type?.startsWith('audio')) {
+      return <span className="truncate">🎤 Голосове повідомлення</span>;
+    }
+    if (fileData) {
+      return <span className="truncate">📄 {fileData.name || 'Документ'}</span>;
+    }
+    return <span className="truncate opacity-80">{replyData.text}</span>;
+  };
+
 const normalizeMessage = (m, currentUser) => {
   const backendSender = getSenderId(m);
   const isMyMessage = checkIsMe(backendSender, currentUser);
@@ -41,6 +72,18 @@ const normalizeMessage = (m, currentUser) => {
       : new Date(m.createdAt);
     timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
+
+  const currentUserId = currentUser?.id || currentUser?.uid || currentUser?.email;
+  const rawReactions = (m.reactions && typeof m.reactions === 'object' && !Array.isArray(m.reactions))
+    ? m.reactions
+    : {};
+  const aggregated = Object.entries(rawReactions).reduce((acc, [uid, emoji]) => {
+    if (!acc[emoji]) acc[emoji] = { emoji, count: 0, reacted: false };
+    acc[emoji].count += 1;
+    if (String(uid).toLowerCase() === String(currentUserId).toLowerCase()) acc[emoji].reacted = true;
+    return acc;
+  }, {});
+
   return {
     id: String(m.id || m._id || Math.random()),
     text: m.text || m.message || m.content || m.body || "Empty",
@@ -50,19 +93,190 @@ const normalizeMessage = (m, currentUser) => {
     timestamp: timeString,
     read: m.read || false,
     replyTo: m.replyTo || null,
-    reactions: Array.isArray(m.reactions) ? m.reactions : [],
+    rawReactions,
+    reactions: Object.values(aggregated),
     isEdited: m.isEdited || false,
     isSystem: m.type === 'system' || m.isSystem || false,
+    mediaType: m.mediaType || 'text',
+    fileData: m.fileData || null,
   };
+};  
+
+const AudioBubble = ({ url, isMe }) => {
+  const audioRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  const bars = useRef(
+    Array.from({ length: 32 }, () => 4 + Math.round(Math.random() * 14))
+  ).current;
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onTime = () => { setCurrentTime(audio.currentTime); if (audio.duration) setProgress(audio.currentTime / audio.duration); };
+    const onLoaded = () => setDuration(audio.duration || 0);
+    const onEnd = () => { setIsPlaying(false); setProgress(0); setCurrentTime(0); };
+    audio.addEventListener('timeupdate', onTime);
+    audio.addEventListener('loadedmetadata', onLoaded);
+    audio.addEventListener('ended', onEnd);
+    return () => {
+      audio.removeEventListener('timeupdate', onTime);
+      audio.removeEventListener('loadedmetadata', onLoaded);
+      audio.removeEventListener('ended', onEnd);
+    };
+  }, []);
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    isPlaying ? audio.pause() : audio.play();
+    setIsPlaying(!isPlaying);
+  };
+
+  const formatTime = (s) => {
+    if (!isFinite(s) || s < 0) return "0:00";
+    return `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
+  };
+
+  const handleSeek = (e) => {
+    const audio = audioRef.current;
+    if (!audio || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    audio.currentTime = ratio * duration;
+    setProgress(ratio);
+    setCurrentTime(ratio * duration);
+  };
+
+  const activeBarCount = Math.round(progress * bars.length);
+
+  return (
+    <div className="flex items-center gap-2.5 mt-1 min-w-[230px]">
+      <audio ref={audioRef} src={url} preload="metadata" className="hidden" />
+      <button onClick={togglePlay} className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors ${isMe ? 'bg-white/15 hover:bg-white/25 text-white' : 'bg-[#6d28d9]/20 hover:bg-[#6d28d9]/30 text-[#a19bfe]'}`}>
+        {isPlaying ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" />}
+      </button>
+      <div className="flex-1 min-w-0">
+        <div onClick={handleSeek} className="flex items-center gap-[2px] h-5 cursor-pointer">
+          {bars.map((h, i) => (
+            <div key={i} className={`w-[2px] rounded-full shrink-0 transition-colors ${i < activeBarCount ? (isMe ? 'bg-white' : 'bg-[#a19bfe]') : (isMe ? 'bg-white/30' : 'bg-white/15')}`} style={{ height: `${h}px` }} />
+          ))}
+        </div>
+        <div className="flex justify-between items-center mt-1">
+          <span className={`text-[10px] ${isMe ? 'text-white/60' : 'text-gray-500'}`}>{formatTime(currentTime)}</span>
+          <span className={`text-[10px] ${isMe ? 'text-white/60' : 'text-gray-500'}`}>{formatTime(duration)}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const MessageMenu = ({ anchorRef, isMe, isOpen, onClose, onCopy, onEdit, onDelete }) => {
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen || !anchorRef.current) return;
+
+    const updatePosition = () => {
+      const rect = anchorRef.current.getBoundingClientRect();
+      const menuWidth = 144;
+      let left = isMe ? rect.right - menuWidth : rect.left;
+      left = Math.max(8, Math.min(left, window.innerWidth - menuWidth - 8));
+      setPosition({ top: rect.bottom + 6, left });
+    };
+
+    updatePosition();
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [isOpen, isMe, anchorRef]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target) && !anchorRef.current?.contains(e.target)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [isOpen, onClose, anchorRef]);
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      ref={menuRef}
+      style={{ position: 'fixed', top: position.top, left: position.left, zIndex: 9999 }}
+      className="w-36 bg-[#161b33] border border-white/10 rounded-xl shadow-2xl py-1.5 animate-in fade-in zoom-in-95"
+      onMouseDown={e => e.stopPropagation()}
+    >
+      <button onClick={() => { onCopy(); onClose(); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-300 hover:bg-white/5 hover:text-white transition-colors">
+        <Copy size={14} /> Copy
+      </button>
+      {isMe && (
+        <>
+          <button onClick={() => { onEdit(); onClose(); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-300 hover:bg-white/5 hover:text-[#a19bfe] transition-colors">
+            <Edit2 size={14} /> Edit
+          </button>
+          <div className="h-[1px] bg-white/5 w-full my-1"></div>
+          <button onClick={() => { onDelete(); onClose(); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-400/10 transition-colors">
+            <Trash2 size={14} /> Delete
+          </button>
+        </>
+      )}
+    </div>,
+    document.body
+  );
+};
+
+const MessageMenuButton = ({ msg, isMe, isOpen, onToggle, onClose, onCopy, onEdit, onDelete }) => {
+  const anchorRef = useRef(null);
+
+  return (
+    <>
+      <button
+        ref={anchorRef}
+        onClick={e => { e.stopPropagation(); onToggle(); }}
+        className={`p-1.5 rounded-lg transition-colors ${isOpen ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+      >
+        <MoreVertical size={16} />
+      </button>
+      <MessageMenu
+        anchorRef={anchorRef}
+        isMe={isMe}
+        isOpen={isOpen}
+        onClose={onClose}
+        onCopy={onCopy}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
+    </>
+  );
 };
 
 const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, roomId }) => {
   const [replyingTo, setReplyingTo] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [activeMenu, setActiveMenu] = useState(null);
+  const [openEmojiPicker, setOpenEmojiPicker] = useState(null);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [participants, setParticipants] = useState([]);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const mediaRecorderRef = useRef(null);
+  const recordedChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
+  const mediaStreamRef = useRef(null);
 
   // --- СТАТУСИ ЧЕРЕЗ СОКЕТИ ---
   const [typingUsers, setTypingUsers] = useState({}); // { userId: userName }
@@ -83,11 +297,14 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
 
   const currentUserId = currentUser?.id || currentUser?.uid || currentUser?._id || currentUser?.email || null;
 
-  useEffect(() => {
-    const handleGlobalClick = () => { if (activeMenu) setActiveMenu(null); };
-    document.addEventListener('mousedown', handleGlobalClick);
-    return () => document.removeEventListener('mousedown', handleGlobalClick);
-  }, [activeMenu]);
+ useEffect(() => {
+  const handleGlobalClick = () => {
+    if (activeMenu) setActiveMenu(null);
+    if (openEmojiPicker) setOpenEmojiPicker(null);
+  };
+  document.addEventListener('mousedown', handleGlobalClick);
+  return () => document.removeEventListener('mousedown', handleGlobalClick);
+}, [activeMenu, openEmojiPicker]);
 
   const fetchParticipants = async () => {
     if (!roomId) return;
@@ -105,80 +322,82 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
 
   useEffect(() => { fetchParticipants(); }, [roomId]);
 
-  // --- POLLING ---
-  useEffect(() => {
-    if (!roomId || !currentUserId) return;
+const sharedMedia = useMemo(() => {
+  const images = [], files = [], links = [], audio = [], video = [];
+  messages.forEach(m => {
+    if (m.isSystem) return;
+    const fileData = m.fileData;
+    const mediaType = m.mediaType;
+    const text = m.text || '';
+    const url = fileData?.url || text;
+    if (!url) return;
 
-    const fetchHistory = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE}/messages/${roomId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!res.ok) return;
-        const history = await res.json();
+    const isVideoUrl = (u) => u?.match(/\.(mp4|mov|webm|ogv)(\?|$)/i) || u?.includes('/video/upload/');
+    const isAudioUrl = (u) => u?.match(/\.(mp3|wav|m4a|aac|flac|ogg|webm)(\?|$)/i);
+    const isPdfUrl = (u) => u?.match(/\.pdf(\?|$)/i);
 
-        if (Array.isArray(history)) {
-          const formattedMessages = history.filter(Boolean).map(m => normalizeMessage(m, currentUser));
-
-          setMessages(prev => {
-            const dbTexts = new Set(formattedMessages.map(m => m.text));
-            const pendingTemp = prev.filter(m => String(m.id).startsWith('temp_') && !dbTexts.has(m.text));
-            const result = [...formattedMessages, ...pendingTemp];
-
-            if (prev.length === result.length) {
-              const lastPrev = prev[prev.length - 1];
-              const lastNew = result[result.length - 1];
-              if (lastPrev?.id === lastNew?.id && lastPrev?.text === lastNew?.text) return prev;
-            }
-            return result;
-          });
-        }
-      } catch (err) { console.error("Polling error:", err); }
-    };
-
-    fetchHistory();
-    const pollingInterval = setInterval(fetchHistory, 3000);
-    return () => clearInterval(pollingInterval);
-  }, [roomId, currentUserId]);
-
-  const sharedMedia = useMemo(() => {
-    const images = [], files = [], links = [];
-    messages.forEach(m => {
-      const text = m.text || '';
-      if (!text || m.isSystem) return;
-      if (isImageUrl(text)) {
-        images.push({ id: m.id, url: text });
-      } else if (text.startsWith('http') && !text.match(/\.(jpeg|jpg|gif|png|webp)/i)) {
-        const isFile = text.match(/\.(pdf|doc|docx|xls|xlsx|zip|rar|txt|csv|pptx)/i);
-        if (isFile) {
-          const parts = text.split('/');
-          files.push({ id: m.id, url: text, name: decodeURIComponent(parts[parts.length - 1] || 'File') });
-        } else {
-          links.push({ id: m.id, url: text, title: text });
-        }
+    if (mediaType === 'audio' || fileData?.type?.startsWith('audio') || isAudioUrl(url)) {
+      audio.push({ id: m.id, url, name: fileData?.name || 'Голосове повідомлення' });
+      return;
+    }
+    if (mediaType === 'video' || fileData?.type?.startsWith('video') || isVideoUrl(url)) {
+      video.push({ id: m.id, url, name: fileData?.name || 'Відео' });
+      return;
+    }
+    const isStrictImageUrl = (u) => u?.match(/\.(jpeg|jpg|gif|png|webp)(\?|$)/i);
+      if (mediaType === 'image' || fileData?.type?.startsWith('image') || isStrictImageUrl(url)) {
+        images.push({ id: m.id, url });
+        return;
       }
-    });
-    return { images, files, links };
-  }, [messages]);
+    if (isPdfUrl(url) || (fileData && !fileData.type?.startsWith('image'))) {
+      files.push({ id: m.id, url, name: fileData?.name || decodeURIComponent(url.split('/').pop() || 'File') });
+      return;
+    }
+    if (text.startsWith('http') && !isImageUrl(text)) {
+      const isFile = text.match(/\.(pdf|doc|docx|xls|xlsx|zip|rar|txt|csv|pptx)/i);
+      if (isFile) {
+        files.push({ id: m.id, url: text, name: decodeURIComponent(text.split('/').pop() || 'File') });
+      } else {
+        links.push({ id: m.id, url: text, title: text });
+      }
+    }
+  });
+  return { images, files, links, audio, video };
+}, [messages]);
 
   const filteredMedia = sharedMedia.images.filter(img => !searchQuery || img.url?.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredFiles = sharedMedia.files.filter(f => !searchQuery || f.name?.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredLinks = sharedMedia.links.filter(l => !searchQuery || l.url?.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredMembers = participants.filter(p => !searchQuery || (p.displayName || p.name || p.email || '').toLowerCase().includes(searchQuery.toLowerCase()));
 
-  // --- SOCKET ---
+ // --- SOCKET ---
   useEffect(() => {
     if (!socket || !roomId) return;
     
     socket.emit('join_room', { roomId });
+
+    // 1. ДОДАЄМО СЛУХАЧА ІСТОРІЇ
+const handleChatHistory = (history) => {
+    if (!Array.isArray(history)) return;
+
+        const formattedMessages = history.filter(Boolean).map(m => normalizeMessage(m, currentUser));
+
+        setMessages(prev => {
+            // Зберігаємо локальні (не відправлені до кінця) повідомлення
+            const dbTexts = new Set(formattedMessages.map(m => m.text));
+            const pendingTemp = prev.filter(m => String(m.id).startsWith('temp_') && !dbTexts.has(m.text));
+            return [...formattedMessages, ...pendingTemp];
+        });
+    };
 
     const handleNewMessage = (backendMessage) => {
       if (backendMessage.roomId !== roomId) return;
       setMessages(prev => {
         const msgId = String(backendMessage.id || backendMessage._id || '');
         if (msgId && prev.some(m => String(m.id) === msgId)) return prev;
-        const filteredPrev = prev.filter(m => !(String(m.id).startsWith('temp_') && m.text === backendMessage.text));
+        const filteredPrev = prev.filter(m =>
+          !(String(m.id).startsWith('temp_') && m.text === backendMessage.text)
+        );
         const normalized = normalizeMessage(
           { ...backendMessage, id: msgId || Math.random().toString() },
           currentUser
@@ -186,7 +405,7 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
         return [...filteredPrev, normalized];
       });
 
-      // Прибираємо статус "друкує" для цього юзера, якщо він відправив повідомлення
+      // Прибираємо статус "друкує", якщо юзер відправив повідомлення
       const senderIdStr = String(getSenderId(backendMessage));
       setTypingUsers(prev => {
         if (!prev[senderIdStr]) return prev;
@@ -210,10 +429,10 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
       }
     };
 
-    // --- ОБРОБНИКИ СТАТУСІВ З СОКЕТУ ---
+    // Обробники статусів
     const handleTypingStart = ({ userId, userName }) => {
       if (checkIsMe(userId, currentUser)) return;
-      setTypingUsers(prev => ({ ...prev, [userId]: userName || 'Someone' }));
+      setTypingUsers(prev => ({ ...prev, [userId]: userName || chatName }));
     };
 
     const handleTypingEnd = ({ userId }) => {
@@ -224,14 +443,8 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
       });
     };
 
-    const handleStatusUpdate = ({ userId, isOnline, lastSeen }) => {
-      setParticipants(prev => prev.map(p => 
-        (String(p.id) === String(userId) || String(p.uid) === String(userId) || String(p.email) === String(userId))
-          ? { ...p, isOnline, lastSeen }
-          : p
-      ));
-    };
-
+    // 2. ПІДПИСУЄМОСЯ НА ІСТОРІЮ
+    socket.on('chat_history', handleChatHistory);
     socket.on('new_message', handleNewMessage);
     socket.on('reaction_added', handleReaction);
     socket.on('message_edited', handleMessageEdited);
@@ -239,17 +452,17 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
     socket.on('message_pinned', handleMessagePinned);
     socket.on('message_unpinned', handleMessageUnpinned);
     socket.on('messages_read', handleMessagesRead);
-    
-    // Статуси
     socket.on('typing_start', handleTypingStart);
     socket.on('typing_end', handleTypingEnd);
-    socket.on('user_status_update', handleStatusUpdate);
 
+    // Очищення при виході з кімнати
     return () => {
       socket.emit('leave_room', { roomId });
       setMessages([]);
       setTypingUsers({});
 
+      // 3. ВІДПИСУЄМОСЯ ВІД ІСТОРІЇ
+      socket.off('chat_history', handleChatHistory);
       socket.off('new_message', handleNewMessage);
       socket.off('reaction_added', handleReaction);
       socket.off('message_edited', handleMessageEdited);
@@ -257,12 +470,10 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
       socket.off('message_pinned', handleMessagePinned);
       socket.off('message_unpinned', handleMessageUnpinned);
       socket.off('messages_read', handleMessagesRead);
-      
       socket.off('typing_start', handleTypingStart);
       socket.off('typing_end', handleTypingEnd);
-      socket.off('user_status_update', handleStatusUpdate);
     };
-  }, [socket, roomId, currentUserId]);
+  }, [socket, roomId, currentUserId, groupName, currentUser]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, typingUsers]);
 
@@ -305,30 +516,37 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
     const senderName = currentUser?.name || currentUser?.email?.split('@')[0] || "User";
 
     const messageData = {
-      roomId: roomId,
-      senderId: senderId,
-      text: textToSend,
-      replyTo: replyingTo ? { senderName: replyingTo.senderName, text: replyingTo.text } : null,
-      mentions: [],
-      file: null
-    };
+    roomId: roomId,
+    senderId: senderId,
+    text: textToSend,
+    replyTo: replyingTo ? {
+      senderName: replyingTo.senderName,
+      text: replyingTo.text,
+      fileData: replyingTo.fileData || null,
+      mediaType: replyingTo.mediaType || 'text'
+    } : null,
+    mentions: [],
+    file: null
+  };
 
-    const tempId = `temp_${Date.now()}`;
-    const tempMsg = {
-      id: tempId,
-      text: textToSend,
-      senderId: senderId,
-      senderName: senderName,
-      isMe: true,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      reactions: [],
-      replyTo: messageData.replyTo
-    };
+  const tempId = `temp_${Date.now()}`;
+  const tempMsg = {
+    id: tempId,
+    text: textToSend,
+    senderId: senderId,
+    senderName: senderName,
+    isMe: true,
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    reactions: [],
+    replyTo: messageData.replyTo
+  };
     
     setMessages(prev => [...prev, tempMsg]);
 
     if (socket) {
       socket.emit('send_message', messageData);
+
+      window.dispatchEvent(new Event('chat_force_update'));
     } else {
       toast.error("Socket disconnected!");
       setMessages(prev => prev.filter(m => m.id !== tempId));
@@ -386,7 +604,11 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
     }
   };
 
-  const handleDelete = (messageId) => { if (socket) socket.emit('delete_message', { roomId, messageId }); };
+  const handleDelete = (messageId) => {
+  const userId = currentUser?.id || currentUser?.uid || currentUser?.email;
+  if (socket) socket.emit('delete_message', { roomId, messageId, userId, forEveryone: true });
+  setMessages(prev => prev.filter(m => m.id !== messageId));
+  };
 
   const handlePin = (msg) => {
     if (socket) socket.emit('pin_message', { roomId, message: msg });
@@ -401,27 +623,128 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
     setActiveMenu(null);
   };
 
-  const toggleReaction = (msgId, emojiStr) => {
-    let updatedReactions = [];
-    setMessages(msgs => msgs.map(m => {
-      if (m.id === msgId) {
-        const safeReactions = Array.isArray(m.reactions) ? m.reactions : [];
-        const existing = safeReactions.find(r => r.emoji === emojiStr);
-        let newReactions = [...safeReactions];
+  const toggleReaction = async (msgId, emojiStr) => {
+  const userId = currentUser?.id || currentUser?.uid || currentUser?.email;
 
-        if (existing) {
-          if (existing.reacted) { existing.count -= 1; existing.reacted = false; }
-          else { existing.count += 1; existing.reacted = true; }
-          newReactions = newReactions.filter(r => r.count > 0);
-        } else { newReactions.push({ emoji: emojiStr, count: 1, reacted: true }); }
+  setMessages(msgs => msgs.map(m => {
+    if (m.id !== msgId) return m;
+    const rawReactions = { ...(m.rawReactions || {}) };
+    if (rawReactions[userId] === emojiStr) {
+      delete rawReactions[userId];
+    } else {
+      rawReactions[userId] = emojiStr;
+    }
+    const counts = {};
+    Object.entries(rawReactions).forEach(([uid, emoji]) => {
+      if (!counts[emoji]) counts[emoji] = { emoji, count: 0, reacted: false };
+      counts[emoji].count += 1;
+      if (String(uid).toLowerCase() === String(userId).toLowerCase()) counts[emoji].reacted = true;
+    });
+    return { ...m, rawReactions, reactions: Object.values(counts) };
+  }));
 
-        updatedReactions = newReactions;
-        return { ...m, reactions: newReactions };
-      }
-      return m;
-    }));
-    if (socket && roomId) socket.emit('add_reaction', { roomId, messageId: msgId, reactions: updatedReactions });
-  };
+  if (socket) {
+    socket.emit('react_message', { roomId, messageId: msgId, userId, emoji: emojiStr });
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+    await fetch(`${API_BASE}/messages/${msgId}/reactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ userId, emoji: emojiStr })
+    });
+  } catch (e) {
+    toast.error('Не вдалося зберегти реакцію');
+  }
+};
+
+const startRecording = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaStreamRef.current = stream;
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+    const recorder = new MediaRecorder(stream, { mimeType });
+    recordedChunksRef.current = [];
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data); };
+    recorder.onstop = () => {
+      stream.getTracks().forEach(track => track.stop());
+      const blob = new Blob(recordedChunksRef.current, { type: mimeType });
+      if (blob.size > 0) uploadVoiceMessage(blob, mimeType);
+    };
+    recorder.start();
+    mediaRecorderRef.current = recorder;
+    setIsRecording(true);
+    setRecordingSeconds(0);
+    recordingTimerRef.current = setInterval(() => setRecordingSeconds(prev => prev + 1), 1000);
+  } catch (err) {
+    toast.error('Не вдалося отримати доступ до мікрофона');
+  }
+};
+
+const stopRecording = () => {
+  if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+    mediaRecorderRef.current.stop();
+  }
+  setIsRecording(false);
+  if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+};
+
+const cancelRecording = () => {
+  if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+    recordedChunksRef.current = [];
+    mediaRecorderRef.current.stop();
+  }
+  if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach(t => t.stop());
+  setIsRecording(false);
+  if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+};
+
+const uploadVoiceMessage = async (blob, mimeType) => {
+  setIsUploadingFile(true);
+  const token = localStorage.getItem('token');
+  const ext = mimeType.includes('webm') ? 'webm' : 'm4a';
+  const fileName = `voice_${Date.now()}.${ext}`;
+  const file = new File([blob], fileName, { type: mimeType });
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('folder', `group_chat_${roomId}`);
+  try {
+    const response = await fetch(`${API_BASE}/storage/upload`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    if (response.ok) {
+      const data = await response.json();
+      const senderId = currentUser?.id || currentUser?.uid || currentUser?.email || "unknown";
+      const tempId = `temp_${Date.now()}`;
+      const messageData = {
+        roomId, senderId, text: data.url, replyTo: null, mentions: [],
+        file: { url: data.url, name: fileName, type: mimeType, size: blob.size }
+      };
+      setMessages(prev => [...prev, {
+        id: tempId, text: data.url, senderId, isMe: true, timestamp: "now",
+        reactions: [], mediaType: 'audio',
+        fileData: { url: data.url, name: fileName, type: mimeType, size: blob.size }
+      }]);
+      if (socket) socket.emit('send_message', messageData);
+    } else {
+      toast.error("Не вдалося надіслати голосове повідомлення.");
+    }
+  } catch (err) {
+    toast.error("Помилка мережі під час надсилання.");
+  } finally {
+    setIsUploadingFile(false);
+  }
+};
+
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach(t => t.stop());
+    };
+  }, []);
 
   const getParticipantData = (senderId, fallbackName) => {
     const p = participants.find(part =>
@@ -446,6 +769,7 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
 
       <style>
         {`
+          .chat-custom-scroll { overscroll-behavior: contain; }
           .chat-custom-scroll::-webkit-scrollbar { width: 5px; }
           .chat-custom-scroll::-webkit-scrollbar-track { background: transparent; }
           .chat-custom-scroll::-webkit-scrollbar-thumb { background-color: rgba(255, 255, 255, 0.1); border-radius: 10px; }
@@ -561,7 +885,7 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
 
               {/* TABS HEADER */}
               <div className="flex px-6 border-b border-white/5 sticky top-0 bg-[#101426] z-10 pt-2 shrink-0 overflow-x-auto custom-scrollbar">
-                {['members', 'media', 'files', 'links'].map(tab => (
+                {['members', 'media', 'video', 'audio', 'files', 'links'].map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -572,6 +896,8 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
                     {tab === 'media' && filteredMedia.length > 0 && <span className="ml-1.5 text-[10px] bg-[#6d28d9]/40 text-[#a19bfe] px-1.5 py-0.5 rounded-full">{filteredMedia.length}</span>}
                     {tab === 'files' && filteredFiles.length > 0 && <span className="ml-1.5 text-[10px] bg-[#6d28d9]/40 text-[#a19bfe] px-1.5 py-0.5 rounded-full">{filteredFiles.length}</span>}
                     {tab === 'links' && filteredLinks.length > 0 && <span className="ml-1.5 text-[10px] bg-[#6d28d9]/40 text-[#a19bfe] px-1.5 py-0.5 rounded-full">{filteredLinks.length}</span>}
+                    {tab === 'audio' && sharedMedia.audio.length > 0 && <span className="ml-1.5 text-[10px] bg-[#6d28d9]/40 text-[#a19bfe] px-1.5 py-0.5 rounded-full">{sharedMedia.audio.length}</span>}
+                    {tab === 'video' && sharedMedia.video.length > 0 && <span className="ml-1.5 text-[10px] bg-[#6d28d9]/40 text-[#a19bfe] px-1.5 py-0.5 rounded-full">{sharedMedia.video.length}</span>}
                   </button>
                 ))}
               </div>
@@ -701,6 +1027,41 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
                     </div>
                   )
                 )}
+                {activeTab === 'audio' && (
+                  sharedMedia.audio.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Mic size={32} className="text-white/10 mb-3" />
+                      <p className="text-sm text-gray-600">No voice messages</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {sharedMedia.audio.map((item, i) => (
+                        <div key={item.id || i} className="p-3 rounded-xl bg-[#161b33] border border-white/5">
+                          <p className="text-[11px] text-gray-400 mb-2 truncate">{item.name}</p>
+                          <AudioBubble url={item.url} isMe={false} />
+                        </div>
+                      ))}
+                    </div>
+                  )
+                )}
+
+                {activeTab === 'video' && (
+                  sharedMedia.video.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <VideoIcon size={32} className="text-white/10 mb-3" />
+                      <p className="text-sm text-gray-600">No shared videos</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {sharedMedia.video.map((item, i) => (
+                        <div key={item.id || i} className="rounded-xl overflow-hidden border border-white/5">
+                          <video controls className="w-full max-h-48 bg-black" src={item.url} />
+                          <p className="text-[11px] text-gray-400 px-3 py-2 truncate">{item.name}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                )}
               </div>
             </div>
           </div>
@@ -755,7 +1116,7 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
       )}
 
       {/* MESSAGES AREA */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 chat-custom-scroll relative z-10 flex flex-col">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 chat-custom-scroll relative z-10 flex flex-col">
         {(messages || []).map((msg, index) => {
           if (msg.isSystem) {
             return (
@@ -802,62 +1163,97 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
                     )}
 
                     {msg.replyTo && (
-                      <div className={`mb-2.5 pl-3 border-l-[3px] text-[12px] rounded-r-lg py-1.5 cursor-pointer transition-colors ${isMe ? 'border-white/50 bg-black/10 text-white' : 'border-[#a19bfe] bg-black/20 text-gray-300'}`}>
-                        <div className="font-bold mb-0.5">{msg.replyTo.senderName}</div>
-                        <div className="truncate max-w-[200px] opacity-80">{msg.replyTo.text}</div>
-                      </div>
-                    )}
+                    <div className={`mb-2.5 pl-3 border-l-[3px] text-[12px] rounded-r-lg py-1.5 cursor-pointer transition-colors ${isMe ? 'border-white/50 bg-black/10 text-white' : 'border-[#a19bfe] bg-black/20 text-gray-300'}`}>
+                      <div className="font-bold mb-0.5">{msg.replyTo.senderName}</div>
+                      <div className="truncate max-w-[200px]">{renderReplyPreview(msg.replyTo)}</div>
+                    </div>
+                  )}
 
                     <span className="break-words block">
-                      {isImageUrl(msg.text) ? (
-                        <img
-                          src={msg.text}
-                          alt="Group Media"
-                          className="max-w-full max-h-64 rounded-xl mt-1.5 object-cover border border-white/10 shadow-md cursor-pointer hover:opacity-95 transition-opacity"
-                          onClick={() => window.open(msg.text, '_blank')}
-                        />
-                      ) : msg.text?.startsWith('http') ? (
-                        <a href={msg.text} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-[#060813]/60 hover:bg-[#060813]/90 border border-white/5 p-3 rounded-xl mt-1.5 transition-all text-[#a19bfe] hover:text-white group/file">
-                          <div className="w-8 h-8 rounded-lg bg-[#a19bfe]/10 flex items-center justify-center text-[#a19bfe] group-hover/file:bg-[#a19bfe]/20 shrink-0">
-                            <FileText size={16} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-gray-300 truncate">Shared Document</p>
-                            <p className="text-[10px] text-gray-500 truncate">Click to open or download</p>
-                          </div>
-                        </a>
-                      ) : (
-                        msg.text
-                      )}
+                      {(() => {
+                        const fileType = msg.fileData?.type || '';
+                        const fileName = msg.fileData?.name || '';
+                        const fileUrl = msg.fileData?.url || msg.text;
+                        const fileSize = msg.fileData?.size;
+
+                        const isImage = fileType.startsWith('image') || (!msg.fileData && isImageUrl(msg.text));
+                        const isVideo = !isImage && (fileType.startsWith('video') || (!msg.fileData && /\.(mp4|mov|ogv)(\?|$|[^a-z])/i.test(fileUrl)));
+                        const isAudio = !isImage && !isVideo && (fileType.startsWith('audio') || (!msg.fileData && /\.(mp3|wav|m4a|aac|flac|webm|ogg)(\?|$|[^a-z])/i.test(fileUrl)));
+                        const hasFile = !!msg.fileData || (msg.text?.startsWith('http') && !isImage && !isVideo && !isAudio);
+
+                        if (isImage) return (
+                          <img src={fileUrl} alt={fileName || "Зображення"} className="max-w-full max-h-64 rounded-xl mt-1 object-cover border border-white/10 shadow-md cursor-pointer hover:opacity-95 transition-opacity" onClick={() => window.open(fileUrl, '_blank')} />
+                        );
+
+                        if (isVideo) return (
+                          <video controls className="max-w-full max-h-64 rounded-xl mt-1 border border-white/10 shadow-md" src={fileUrl}>
+                            Ваш браузер не підтримує відео.
+                          </video>
+                        );
+
+                        if (isAudio) return <AudioBubble url={fileUrl} isMe={isMe} />;
+
+                        if (hasFile) {
+                          const sizeLabel = fileSize ? `${(fileSize / 1024).toFixed(0)} KB` : '';
+                          const displayName = fileName || decodeURIComponent(fileUrl.split('/').pop() || 'Документ');
+                          return (
+                            <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-[#060813]/60 hover:bg-[#060813]/90 border border-white/5 p-3 rounded-xl mt-1 transition-all text-[#a19bfe] hover:text-white group/file">
+                              <div className="w-8 h-8 rounded-lg bg-[#a19bfe]/10 flex items-center justify-center text-[#a19bfe] group-hover/file:bg-[#a19bfe]/20 shrink-0"><FileText size={16} /></div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold text-gray-300 truncate">{displayName}</p>
+                                <p className="text-[10px] text-gray-500 truncate">{sizeLabel || 'Натисніть, щоб відкрити'}</p>
+                              </div>
+                            </a>
+                          );
+                        }
+
+                        return msg.text;
+                      })()}
                     </span>
 
                     {/* HOVER MENU */}
-                    <div
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={(e) => e.stopPropagation()}
-                      className={`absolute top-0 ${isMe ? '-left-36' : '-right-36'} ${activeMenu === msg.id ? 'opacity-100 visible' : 'opacity-0 invisible group-hover/bubble:opacity-100 group-hover/bubble:visible'} transition-all flex items-center gap-1 bg-[#101426]/95 backdrop-blur-xl border border-white/10 rounded-xl p-1 shadow-xl z-40`}
-                    >
-                      <button onClick={() => toggleReaction(msg.id, '👍')} className="p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-white/10 rounded-lg transition-colors"><Smile size={16} /></button>
-                      <button onClick={() => setReplyingTo({ senderName: isMe ? "You" : sender.name, text: msg.text })} className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"><Reply size={16} /></button>
-                      <button onClick={() => handlePin(msg)} className="p-1.5 text-gray-400 hover:text-[#a19bfe] hover:bg-white/10 rounded-lg transition-colors"><Pin size={16} /></button>
-                      <div className="relative">
-                        <button onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === msg.id ? null : msg.id); }} className={`p-1.5 rounded-lg transition-colors ${activeMenu === msg.id ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}>
-                          <MoreVertical size={16} />
-                        </button>
-                        {activeMenu === msg.id && (
-                          <div className={`absolute top-full ${isMe ? 'right-0' : 'left-0'} mt-2 w-36 bg-[#161b33] border border-white/10 rounded-xl shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95`}>
-                            <button onClick={(e) => { e.stopPropagation(); copyToClipboard(msg.text); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-300 hover:bg-white/5 hover:text-white transition-colors"><Copy size={14} /> Copy</button>
-                            {isMe && (
-                              <>
-                                <button onClick={(e) => { e.stopPropagation(); setInput(msg.text); setEditingMessage(msg); setActiveMenu(null); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-300 hover:bg-white/5 hover:text-[#a19bfe] transition-colors"><Edit2 size={14} /> Edit</button>
-                                <div className="h-[1px] bg-white/5 w-full my-1"></div>
-                                <button onClick={(e) => { e.stopPropagation(); handleDelete(msg.id); setActiveMenu(null); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-400/10 transition-colors"><Trash2 size={14} /> Delete</button>
-                              </>
-                            )}
-                          </div>
-                        )}
+                      <div
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                        className={`absolute top-0 ${isMe ? '-left-36' : '-right-36'} ${activeMenu === msg.id ? 'opacity-100 visible' : 'opacity-0 invisible group-hover/bubble:opacity-100 group-hover/bubble:visible'} transition-all flex items-center gap-1 bg-[#101426]/95 backdrop-blur-xl border border-white/10 rounded-xl p-1 shadow-xl z-40`}
+                      >
+                        <div className="relative">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setOpenEmojiPicker(openEmojiPicker === msg.id ? null : msg.id); }}
+                            className="p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-white/10 rounded-lg transition-colors"
+                          >
+                            <Smile size={16} />
+                          </button>
+                          {openEmojiPicker === msg.id && (
+                            <div
+                              onMouseDown={e => e.stopPropagation()}
+                              className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 flex bg-[#161b33] border border-white/10 rounded-xl p-1 gap-0.5 shadow-xl z-50 animate-in fade-in zoom-in-95"
+                            >
+                              {['👍', '❤️', '😂', '😮', '😢', '🔥'].map(emoji => (
+                                <button
+                                  key={emoji}
+                                  onClick={() => { toggleReaction(msg.id, emoji); setOpenEmojiPicker(null); }}
+                                  className="w-7 h-7 flex items-center justify-center text-base hover:bg-white/10 rounded-lg transition-transform hover:scale-125"
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <button onClick={() => setReplyingTo({ senderName: isMe ? "You" : sender.name, text: msg.text, fileData: msg.fileData, mediaType: msg.mediaType })} className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"><Reply size={16} /></button>
+                        <button onClick={() => handlePin(msg)} className="p-1.5 text-gray-400 hover:text-[#a19bfe] hover:bg-white/10 rounded-lg transition-colors"><Pin size={16} /></button>
+                        <MessageMenuButton
+                          msg={msg}
+                          isMe={isMe}
+                          isOpen={activeMenu === msg.id}
+                          onToggle={() => setActiveMenu(activeMenu === msg.id ? null : msg.id)}
+                          onClose={() => setActiveMenu(null)}
+                          onCopy={() => copyToClipboard(msg.text)}
+                          onEdit={() => { setInput(msg.text); setEditingMessage(msg); }}
+                          onDelete={() => handleDelete(msg.id)}
+                        />
                       </div>
-                    </div>
                   </div>
 
                   <div className={`flex flex-wrap items-center gap-1.5 mt-1 px-1 w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
@@ -952,8 +1348,20 @@ const GroupChatArea = ({ groupName = "Group Chat", currentUser, onBack, socket, 
                 <button onClick={handleSend} disabled={isUploadingFile} className="p-2.5 bg-gradient-to-r from-[#6d28d9] to-[#3b82f6] text-white rounded-xl shadow-[0_0_15px_rgba(109,40,217,0.4)] active:scale-95 transition-all animate-in zoom-in duration-200">
                   {editingMessage ? <Check size={18} /> : <ArrowRight size={18} />}
                 </button>
+              ) : isRecording ? (
+                <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-200">
+                  <span className="text-xs font-bold text-red-400 tabular-nums">
+                    {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, '0')}
+                  </span>
+                  <button type="button" onClick={cancelRecording} className="p-2.5 text-gray-500 hover:text-red-400 transition-colors rounded-xl hover:bg-white/5">
+                    <X size={18} />
+                  </button>
+                  <button type="button" onClick={stopRecording} className="p-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl shadow-[0_0_15px_rgba(239,68,68,0.4)] active:scale-95 transition-all">
+                    <Square size={16} fill="currentColor" />
+                  </button>
+                </div>
               ) : (
-                <button type="button" className="p-2.5 text-gray-500 hover:text-[#a19bfe] transition-colors rounded-xl hover:bg-white/5 animate-in zoom-in duration-200">
+                <button type="button" onClick={startRecording} disabled={isUploadingFile} className="p-2.5 text-gray-500 hover:text-[#a19bfe] transition-colors rounded-xl hover:bg-white/5 animate-in zoom-in duration-200 disabled:opacity-40">
                   <Mic size={20} />
                 </button>
               )}

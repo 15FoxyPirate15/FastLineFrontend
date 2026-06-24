@@ -34,12 +34,15 @@ const ManageMembersModal = ({ isOpen, onClose, roomId, groupName, participants, 
       const token = localStorage.getItem('token');
       const response = await fetch(`https://backendfastline.onrender.com/chats/${roomId}/members`, { 
         method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ email: user.email }) 
+        body: JSON.stringify({ email: user.email, requesterEmail: currentUser?.email })
       });
       if (response.ok) {
         toast.success(`${user.displayName || user.name || user.email} added to group!`, { style: { background: '#1e1b2e', color: '#fff' }});
         setSearchQuery(''); refreshParticipants(); 
-      } else { toast.error("Failed to add user", { style: { background: '#1e1b2e', color: '#fff' }}); }
+      } else {
+        const err = await response.json();
+        toast.error(err.message || "Failed to add user", { style: { background: '#1e1b2e', color: '#fff' }});
+      }
     } catch (error) { toast.error("Connection error", { style: { background: '#1e1b2e', color: '#fff' }}); }
   };
 
@@ -49,7 +52,7 @@ const ManageMembersModal = ({ isOpen, onClose, roomId, groupName, participants, 
       const token = localStorage.getItem('token');
       const response = await fetch(`https://backendfastline.onrender.com/chats/${roomId}/members`, { 
         method: 'DELETE', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ email: userEmail }) 
+        body: JSON.stringify({ email: user.email, requesterEmail: currentUser?.email }) 
       });
       if (response.ok) {
         toast.success(`${userEmail} removed.`, { style: { background: '#1e1b2e', color: '#fff' }});

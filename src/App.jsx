@@ -142,6 +142,44 @@ function App() {
     setActiveView('welcome');
   };
 
+  // Спільна функція для відкриття приватного чату
+  const handleStartDirectChat = async (targetUser) => {
+    if (!targetUser) return;
+    const token = localStorage.getItem('token');
+    
+    try {
+        const response = await fetch('https://backendfastline.onrender.com/chats/private', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${token}` 
+            },
+            body: JSON.stringify({ 
+                u1: user?.email, 
+                u2: targetUser?.email || targetUser?.tag 
+            })
+        });
+        
+        if (response.ok) {
+            const chatData = await response.json();
+            const realRoomId = chatData?.id || chatData?.chatId || chatData?.roomId;
+            
+            if (!realRoomId) {
+                console.error('Бекенд не повернув id чату:', chatData);
+                return;
+            }
+            
+            setSelectedChatUser({ ...targetUser, roomId: realRoomId });
+            handleNavigate('chat_direct');
+            setRefreshSidebar(prev => prev + 1);
+        } else {
+            console.error('Помилка створення чату:', response.status);
+        }
+    } catch (err) { 
+        console.error('Network error:', err); 
+    }
+  };
+
   const getBackground = () => {
     if (theme === 'ocean') return "bg-blue-900";
     return "bg-gradient-to-br from-[#1e1b4b] via-[#172554] to-[#1e1b4b]"; 
@@ -154,7 +192,18 @@ function App() {
 
     switch(activeView) {
       case 'ai_chat': return <ChatArea key="ai" chatName="AI Assistant" isAi={true} currentUser={user} socket={socket} roomId="ai_room" onBack={() => handleNavigate('welcome')} />;
-      case 'chat_direct': return <ChatArea key={`chat_${selectedChatUser?.roomId || selectedChatUser?.id || 'temp'}`} chatName={selectedChatUser?.displayName || selectedChatUser?.name || "User"} isAi={false} currentUser={user} socket={socket} roomId={selectedChatUser?.roomId || `temp_room_${selectedChatUser?.id || Date.now()}`} onBack={() => handleNavigate('welcome')} />;
+      case 'chat_direct': return (
+    <ChatArea 
+        key={`chat_${selectedChatUser?.roomId}`} 
+        chatName={selectedChatUser?.displayName || selectedChatUser?.name || "User"} 
+        partnerEmail={selectedChatUser?.email}  
+        isAi={false} 
+        currentUser={user} 
+        socket={socket} 
+        roomId={selectedChatUser?.roomId}  // без fallback
+        onBack={() => handleNavigate('welcome')} 
+    />
+);
       case 'group_chat': return <GroupChatArea key={`group_${selectedGroupChat?.id || 'temp'}`} groupName={selectedGroupChat?.name || "Team Group"} currentUser={user} socket={socket} roomId={selectedGroupChat?.id} onBack={() => handleNavigate('welcome')} />;
       case 'edit_profile': return <EditProfile currentUser={user} onBack={() => handleNavigate('welcome')} onSave={(newData) => { setUser(prev => ({ ...prev, ...newData })); handleNavigate('welcome'); }} />;
       case 'calendar': return <CalendarPage onNavigate={handleNavigate} />;
@@ -162,11 +211,8 @@ function App() {
       case 'tasks': return <TasksPage onNavigate={handleNavigate} currentUser={user} />;
       case 'contacts': return <ContactsPage 
       onNavigate={handleNavigate} 
-      currentUser={user}  // ← додай це
-      onStartChat={(targetUser) => { 
-        setSelectedChatUser(targetUser); 
-        handleNavigate('chat_direct'); 
-      }} 
+      currentUser={user}  
+      onStartChat={handleStartDirectChat} 
 />;
       case 'meetings': return <MeetingsPage onNavigate={handleNavigate} />;
       case 'projects': return <ProjectsPage onNavigate={handleNavigate} currentUser={user} />;
@@ -208,39 +254,28 @@ function App() {
         `}
       </style>
 
-      <Sidebar 
-        onNavigate={handleNavigate} 
-        currentUser={user} 
-        onProfileClick={() => handleNavigate('edit_profile')}
-        onLogout={handleLogout}
-        refreshTrigger={refreshSidebar}
-        onCreateGroupClick={() => setIsGroupModalOpen(true)}
-        onStartGroupChat={(groupData) => {
-            setSelectedGroupChat(groupData);
-            handleNavigate('group_chat');
-        }}
-        onStartChat={async (targetUser) => { 
-            if (!targetUser) return;
-            const token = localStorage.getItem('token');
-            let finalRoomId = `temp_room_${targetUser.id || Date.now()}`;
-            
-            try {
-                const response = await fetch('https://backendfastline.onrender.com/chats/private', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ u1: user?.email, u2: targetUser?.email || targetUser?.tag })
-                });
-                if (response.ok) {
-                    const chatData = await response.json();
-                    finalRoomId = chatData?.id || finalRoomId; 
-                }
-            } catch (err) { console.warn("Бекенд не створив чат:", err); }
+      <Sidebar
+        activeChatId={
+        activeView === 'chat_direct'
+            ? selectedChatUser?.roomId
+            : activeView === 'group_chat'
+                ? selectedGroupChat?.id
+                : null
+    }
+    onNavigate={handleNavigate} 
+    currentUser={user} 
+    onProfileClick={() => handleNavigate('edit_profile')}
+    onLogout={handleLogout}
+    refreshTrigger={refreshSidebar}
+    onCreateGroupClick={() => setIsGroupModalOpen(true)}
+    onStartGroupChat={(groupData) => {
+        setSelectedGroupChat(groupData);
+        handleNavigate('group_chat');
+    }}
+    onStartChat={handleStartDirectChat}
 
-            setSelectedChatUser({ ...targetUser, roomId: finalRoomId });
-            handleNavigate('chat_direct');
-            setRefreshSidebar(prev => prev + 1); 
-        }}
-      />
+    socket={socket} // <--- ДОДАЙТЕ ЛИШЕ ЦЕЙ ОДИН РЯДОК!
+/>
       
       <div className={`flex-1 ${getBackground()} transition-all duration-1000 ease-in-out relative overflow-hidden`}>
         <QuickNav activeView={activeView} onNavigate={handleNavigate} />

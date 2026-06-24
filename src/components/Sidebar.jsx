@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Settings, LogOut, FolderKanban, MessageSquare, Plus, Users, Hash, Contact, Zap, Shield, Code2, BookOpen, BarChart3, ChevronRight, X, ArrowRight, Bell, CheckCircle2, Trash2, CheckCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartChat, onStartGroupChat, refreshTrigger, onCreateGroupClick, socket }) => {
+const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartChat, onStartGroupChat, refreshTrigger, onCreateGroupClick, socket, activeChatId }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -10,10 +10,19 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
   
   const [directChats, setDirectChats] = useState([]);
   const [groupChats, setGroupChats] = useState([]);
+
+  const directChatsRef = useRef(directChats);
+  const groupChatsRef = useRef(groupChats);
+  useEffect(() => { directChatsRef.current = directChats; }, [directChats]);
+  useEffect(() => { groupChatsRef.current = groupChats; }, [groupChats]);
+
+  const activeChatIdRef = useRef(activeChatId);
+  useEffect(() => { activeChatIdRef.current = activeChatId; }, [activeChatId]);
+
+  const [unreadRooms, setUnreadRooms] = useState(new Set()); 
   const [projects, setProjects] = useState([]); 
   const [isLoadingChats, setIsLoadingChats] = useState(true);
 
-  // --- СТАНИ ДЛЯ РЕАЛЬНИХ СПОВІЩЕНЬ ---
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -83,113 +92,275 @@ const Sidebar = ({ onNavigate, currentUser, onProfileClick, onLogout, onStartCha
     } else { setSearchResults([]); }
   };
 
-  // --- REST API: ОТРИМАННЯ СПОВІЩЕНЬ ПРИ ЗАВАНТАЖЕННІ ---
-  const fetchNotificationsData = async () => {
-      if (!currentUser) return;
-      try {
-          const token = localStorage.getItem('token');
-          const notifRes = await fetch('https://backendfastline.onrender.com/notifications', { headers: { 'Authorization': `Bearer ${token}` } });
-          if (notifRes.ok) setNotifications(await notifRes.json());
-
-          const countRes = await fetch('https://backendfastline.onrender.com/notifications/unread-count', { headers: { 'Authorization': `Bearer ${token}` } });
-          if (countRes.ok) {
-              const countData = await countRes.json();
-              setUnreadCount(countData.count || 0);
-          }
-      } catch (err) { console.error("Notifications fetch error", err); }
-  };
-
-const fetchAllData = async () => {
+const fetchNotificationsData = async () => {
     if (!currentUser) return;
-    setIsLoadingChats(true);
+    try {
+        const token = localStorage.getItem('token');
+        const notifRes = await fetch('https://backendfastline.onrender.com/notifications', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (notifRes.ok) {
+            const allNotifs = await notifRes.json();
+
+            const bellAllowedTypes = ['project_invite', 'task_assigned', 'task_completed', 'security_alert'];
+            const filtered = allNotifs.filter(n =>
+                bellAllowedTypes.includes(n.type) && !(n?.data?.roomId || n?.roomId)
+            );
+
+            setNotifications(filtered);
+            // Рахуємо unreadCount САМІ, на основі того ж відфільтрованого списку,
+            // а не довіряємо бекендному /unread-count (який рахує і чат-сповіщення теж)
+            setUnreadCount(filtered.filter(n => !n.read).length);
+        }
+    } catch (err) {}
+};
+
+const fetchAllData = useCallback(async (silent = false) => {
+    if (!currentUser) return;
+    if (!silent) setIsLoadingChats(true);
+
     try {
         const token = localStorage.getItem('token');
         const userId = currentUser.id || currentUser.uid || currentUser.email;
+        const headers = { 'Authorization': `Bearer ${token}` };
 
-        const chatsRes = await fetch(`https://backendfastline.onrender.com/chats/user/${currentUser.email}`, { 
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const chatsRes = await fetch(`https://backendfastline.onrender.com/chats/user/${currentUser.email}`, { headers });
 
         if (chatsRes.ok) {
             const data = await chatsRes.json();
-            console.log("Бекенд віддав такі чати:", data);
 
             if (Array.isArray(data)) {
-                const dChats = []; const gChats = [];
-                
-                data.forEach(chat => {
-                    // Розрахунок часу
-                    const timeSource = chat.lastMessage?.timestamp || chat.createdAt?._seconds * 1000 || Date.now();
-                    const timeString = new Date(timeSource).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                // Для кожного чату підвантажуємо РЕАЛЬНЕ останнє повідомлення,
+                // бо chat.lastMessage на бекенді ненадійне (не оновлюється при send_message через сокет)
+                // Не робимо окремих запитів — покладаємось на lastMessage з чату та локальний preview
+                const realLastMessages = data.map(() => null);
 
-                    // Логіка для ПРИВАТНИХ ЧАТІВ
+                const dChats = []; const gChats = [];
+
+                data.forEach((chat, idx) => {
+                    const realLast = realLastMessages[idx];
+
+                    const localPreview = window.__localChatPreview?.[chat.id];
+                    const realLastTimestamp = realLast?.createdAt || 0;
+
+                    let subtitle, timeMs;
+                    if (localPreview && localPreview.timestampMs >= realLastTimestamp) {
+                        subtitle = localPreview.text;
+                        timeMs = localPreview.timestampMs;
+                    } else if (chat.lastMessage) {
+                        subtitle = chat.lastMessage.text || "Файл або медіа";
+                        timeMs = chat.lastMessage.timestamp || Date.now();
+                    } else {
+                        subtitle = "No messages yet";
+                        timeMs = chat.createdAt?._seconds * 1000 || Date.now();
+                    }
+
+                    const timeString = new Date(timeMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
                     if (chat.type === 'private') {
-                        // Знаходимо партнера, який не є поточним юзером
                         const partner = chat.participants.find(p => p.email !== currentUser.email);
-                        dChats.push({ 
-                            id: chat.id, 
+                        dChats.push({
+                            id: chat.id,
+                            partnerId: partner?.id || partner?.uid,
                             name: chat.name || partner?.displayName || partner?.email?.split('@')[0] || "Unknown",
                             email: partner?.email || "Unknown",
-                            subtitle: chat.lastMessage?.text || "No messages yet", 
-                            time: timeString 
+                            subtitle,
+                            time: timeString,
+                            _timeMs: timeMs
                         });
-                    } 
-                    // Логіка для ГРУП / ПРОЕКТІВ
-                    else {
-                        gChats.push({ 
-                            id: chat.id, 
-                            name: chat.name || "Unnamed Group", 
-                            subtitle: chat.lastMessage?.text || "No messages yet", 
-                            time: timeString 
+                    } else {
+                        gChats.push({
+                            id: chat.id,
+                            name: chat.name || "Unnamed Group",
+                            subtitle,
+                            time: timeString,
+                            _timeMs: timeMs
                         });
                     }
                 });
-                
-                setDirectChats(dChats); 
+
+                dChats.sort((a, b) => b._timeMs - a._timeMs);
+                gChats.sort((a, b) => b._timeMs - a._timeMs);
+
+                setDirectChats(dChats);
                 setGroupChats(gChats);
+
+                // Одразу приєднуємось до всіх кімнат
+                if (socket) {
+                  [...dChats, ...gChats].forEach(chat => {
+                    if (chat.id && !joinedRoomsRef.current.has(chat.id)) {
+                      socket.emit('join_room', { roomId: chat.id });
+                      joinedRoomsRef.current.add(chat.id);
+                    }
+                  });
+                }
             }
         }
 
-        const projRes = await fetch(`https://backendfastline.onrender.com/projects?userId=${encodeURIComponent(userId)}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        const projRes = await fetch(`https://backendfastline.onrender.com/projects?userId=${encodeURIComponent(userId)}`, { headers });
         if (projRes.ok) setProjects(await projRes.json());
 
         await fetchNotificationsData();
 
-    } catch (err) { console.error("Data loading error:", err); } 
-    finally { setIsLoadingChats(false); }
-  };
+    } catch (err) {
+        console.error("Data loading error:", err);
+    } finally {
+        if (!silent) setIsLoadingChats(false);
+    }
+}, [currentUser?.email, currentUser?.id]);
 
   useEffect(() => { 
       fetchAllData(); 
-      // Ми прибрали setInterval! Тепер покладаємося на WebSockets.
-  }, [currentUser, refreshTrigger]);
+  }, [fetchAllData, refreshTrigger]);
 
-  // --- WEBSOCKETS ДЛЯ РЕАЛТАЙМ СПОВІЩЕНЬ ---
+  const joinedRoomsRef = useRef(new Set());
+
   useEffect(() => {
-      if (!socket || !currentUser) return;
-      
-      const handleNewNotification = (notification) => {
-          setNotifications(prev => [notification, ...prev]);
-          setUnreadCount(prev => prev + 1);
-          toast.success(notification.title || "New notification!");
-      };
+    if (!socket || !currentUser) return;
 
-      const handleUnreadCount = (data) => {
-          if (data && data.count !== undefined) {
-              setUnreadCount(data.count);
-          }
-      };
+    const allRoomIds = [
+      ...directChats.map(c => c.id),
+      ...groupChats.map(g => g.id),
+    ].filter(Boolean);
 
-      socket.on('new_notification', handleNewNotification);
-      socket.on('unread_notifications_count', handleUnreadCount);
+    allRoomIds.forEach(roomId => {
+      if (!joinedRoomsRef.current.has(roomId)) {
+        socket.emit('join_room', { roomId });
+        joinedRoomsRef.current.add(roomId);
+      }
+    });
+  }, [socket, currentUser, directChats, groupChats]);
 
-      return () => {
-          socket.off('new_notification', handleNewNotification);
-          socket.off('unread_notifications_count', handleUnreadCount);
-      };
-  }, [socket, currentUser]);
+// --- СОКЕТИ ТА РЕАЛТАЙМ ---
+useEffect(() => {
+  if (!socket || !currentUser) return;
 
-  // --- ОБРОБКА КЛІКІВ СПОВІЩЕНЬ ---
+  // Час останнього ЛОКАЛЬНОГО оновлення превʼю для кожної кімнати.
+  // Захищає від того, щоб fetchAllData() перезатер свіжий текст застарілим lastMessage з бекенду.
+  const lastLocalUpdateRef = { current: {} };
+
+  const myIds = [currentUser.id, currentUser.uid, currentUser.email]
+    .filter(Boolean)
+    .map(s => String(s).toLowerCase().trim());
+
+  const isMessageMine = (msg) => {
+    const rawSenderId = msg.senderId || msg.from || msg.uid || msg.userId;
+    if (!rawSenderId) return false; // якщо sender невідомий — НІКОЛИ не вважаємо своїм
+    const senderId = String(rawSenderId).toLowerCase().trim();
+    return myIds.includes(senderId);
+  };
+
+const updateChatPreviewLocally = (roomId, text, markUnread) => {
+    if (!roomId) return;
+
+    const nowMs = Date.now();
+    window.__localChatPreview = window.__localChatPreview || {};
+    window.__localChatPreview[roomId] = { text, timestampMs: nowMs };
+
+    const timeStr = new Date(nowMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const updateList = (list) => {
+        const updated = list.map(c =>
+            (c.id === roomId || c.partnerId === roomId)
+                ? { ...c, subtitle: text, time: timeStr }
+                : c
+        );
+        return updated.sort((a, b) => new Date('1970/01/01 ' + b.time) - new Date('1970/01/01 ' + a.time));
+    };
+
+    setDirectChats(prev => updateList(prev));
+    setGroupChats(prev => updateList(prev));
+
+    if (markUnread) {
+        setUnreadRooms(prev => new Set(prev).add(roomId));
+    } else {
+        setUnreadRooms(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(roomId);
+            return newSet;
+        });
+    }
+};
+
+const handleNewNotification = (notification) => {
+    // БІЛИЙ СПИСОК: у дзвіночок потрапляють ТІЛЬКИ ці типи.
+    // Усе інше (чат-повідомлення: private_message, group_message, reply, mention,
+    // а також будь-що з roomId) ігнорується за замовчуванням — навіть якщо
+    // бекенд колись пришле новий/незнайомий тип.
+    const bellAllowedTypes = ['project_invite', 'task_assigned', 'task_completed', 'security_alert'];
+
+    const hasRoomId = !!(notification?.data?.roomId || notification?.roomId);
+
+    if (hasRoomId || !bellAllowedTypes.includes(notification.type)) {
+        return; // не потрапляє у дзвіночок
+    }
+
+    setNotifications(prev => [notification, ...prev]);
+    setUnreadCount(prev => prev + 1);
+    toast.success(notification.title || "Нове сповіщення!");
+};
+
+  // 2. Прямі повідомлення з сокету (new_message / chat_updated)
+// 2. Прямі повідомлення з сокету (new_message / chat_updated)
+  const handleMessageOrUpdate = (data) => {
+    const msg = data.message || data;
+    const roomId = data.roomId || msg.roomId || data.id;
+    const text = msg.text || "Файл або медіа";
+    const mine = isMessageMine(msg);
+    if (!roomId) return;
+
+    // Читаємо з ref, а не з пропу напряму — інакше тут завжди буде
+    // те значення activeChatId, яке було під час підписки на сокет.
+    const isCurrentlyOpen = roomId === activeChatIdRef.current;
+
+    updateChatPreviewLocally(roomId, text, !mine && !isCurrentlyOpen);
+  };
+
+  socket.on('new_notification', handleNewNotification);
+  socket.on('new_message', handleMessageOrUpdate);
+  socket.on('chat_updated', handleMessageOrUpdate);
+  socket.on('room_updated', () => setTimeout(() => fetchAllData(true), 1000));
+
+  // Зберігаємо ref глобально для захисту fetchAllData від перезапису свіжих даних
+  window.__lastLocalChatUpdate = lastLocalUpdateRef.current;
+
+  return () => {
+    socket.off('new_notification', handleNewNotification);
+    socket.off('new_message', handleMessageOrUpdate);
+    socket.off('chat_updated', handleMessageOrUpdate);
+    socket.off('room_updated');
+  };
+}, [socket, currentUser, fetchAllData]);
+
+useEffect(() => {
+const handleLocalSend = (e) => {
+    const { roomId, text } = e.detail || {};
+    if (!roomId || !text) return;
+
+    const nowMs = Date.now();
+    window.__localChatPreview = window.__localChatPreview || {};
+    window.__localChatPreview[roomId] = { text, timestampMs: nowMs };
+
+    const timeStr = new Date(nowMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const updateList = (list) => {
+        const updated = list.map(c =>
+            (c.id === roomId || c.partnerId === roomId)
+                ? { ...c, subtitle: text, time: timeStr }
+                : c
+        );
+        return updated.sort((a, b) => new Date('1970/01/01 ' + b.time) - new Date('1970/01/01 ' + a.time));
+    };
+    setDirectChats(prev => updateList(prev));
+    setGroupChats(prev => updateList(prev));
+
+    setUnreadRooms(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(roomId);
+        return newSet;
+    });
+};
+    window.addEventListener('chat_force_update', handleLocalSend);
+    return () => window.removeEventListener('chat_force_update', handleLocalSend);
+}, []);
+
   const handleMarkAsRead = async (notifId) => {
       try {
           const token = localStorage.getItem('token');
@@ -199,7 +370,7 @@ const fetchAllData = async () => {
           });
           setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n));
           setUnreadCount(prev => Math.max(0, prev - 1));
-      } catch (err) { console.error(err); }
+      } catch (err) {}
   };
 
   const handleMarkAllAsRead = async () => {
@@ -211,8 +382,7 @@ const fetchAllData = async () => {
           });
           setNotifications(prev => prev.map(n => ({ ...n, read: true })));
           setUnreadCount(0);
-          toast.success("All caught up!", { icon: '✨' });
-      } catch (err) { console.error(err); }
+      } catch (err) {}
   };
 
   const handleDeleteNotification = async (notifId, e) => {
@@ -223,13 +393,12 @@ const fetchAllData = async () => {
               method: 'DELETE',
               headers: { 'Authorization': `Bearer ${token}` }
           });
-          // Якщо видаляємо непрочитане, треба також зменшити лічильник
           const notifToDelete = notifications.find(n => n.id === notifId);
           if (notifToDelete && !notifToDelete.read) {
               setUnreadCount(prev => Math.max(0, prev - 1));
           }
           setNotifications(prev => prev.filter(n => n.id !== notifId));
-      } catch (err) { console.error(err); }
+      } catch (err) {}
   };
 
   const ChatSkeleton = () => (
@@ -248,7 +417,6 @@ const fetchAllData = async () => {
       return { icon: icons[idx % icons.length], colorClass: colors[idx % colors.length] };
   };
 
-  // Вибір іконки залежно від типу сповіщення (на основі NotificationType з бекенду)
   const getNotificationIcon = (type) => {
       switch(type) {
           case 'private_message':
@@ -277,7 +445,6 @@ const fetchAllData = async () => {
         </div>
         
         <div className="flex items-center gap-2">
-            {/* NOTIFICATION BELL */}
             <div className="relative" ref={notificationsRef}>
                 <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className={`p-2.5 rounded-xl transition-all shadow-inner group shrink-0 relative ${isNotificationsOpen ? 'bg-[#6d28d9] text-white border-transparent' : 'bg-[#101426] hover:bg-[#1a1f3c] border border-white/5 hover:border-[#6d28d9]/50 text-[#a19bfe] hover:text-white'}`}>
                     <Bell size={18} className="group-hover:scale-110 transition-transform" />
@@ -289,7 +456,6 @@ const fetchAllData = async () => {
                     )}
                 </button>
 
-{/* РЕАЛЬНІ СПОВІЩЕННЯ З БЕКЕНДУ */}
         {isNotificationsOpen && (
             <div className="absolute top-full mt-4 -left-4 w-[320px] bg-[#161b33]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.7)] z-[999] overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-left">
                 <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-[#6d28d9]/10 to-transparent">
@@ -308,16 +474,10 @@ const fetchAllData = async () => {
                             <div 
                               key={notif.id} 
                               onClick={() => {
-                              // 1. Позначаємо як прочитане
                               if (!notif.read) handleMarkAsRead(notif.id);
-                              
-                              // 2. Реалізуємо навігацію залежно від типу
                               if (notif.data && notif.data.roomId) {
-                                  // Якщо це повідомлення, переходимо в чат
-                                  // Вам потрібно викликати функцію, яка відкриває чат (наприклад, onStartChat)
                                   onStartChat({ id: notif.data.roomId, name: notif.title }); 
                               }
-                              // Закриваємо меню сповіщень
                               setIsNotificationsOpen(false);
                           }}
                               className={`p-3 rounded-xl border transition-colors mb-2 last:mb-0 cursor-pointer group relative ${notif.read ? 'bg-[#0a0f1e]/40 border-white/5 hover:border-white/10 opacity-70' : 'bg-[#6d28d9]/10 border-[#6d28d9]/30 hover:bg-[#6d28d9]/20'}`}
@@ -396,7 +556,9 @@ const fetchAllData = async () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-gray-200 text-sm font-bold truncate group-hover:text-white">{uName}</div>
-                        <div className="text-[11px] text-gray-500 truncate">@{u.tag || uEmail.split('@')[0]}</div>
+                        <div className="text-[11px] text-gray-500 truncate">
+                          @{(u.tag || uEmail.split('@')[0]).replace(/^@/, '')}
+                        </div>
                       </div>
                       <ArrowRight size={14} className="text-gray-600 opacity-0 group-hover:opacity-100 transition-all transform -translate-x-2 group-hover:translate-x-0" />
                     </div>
@@ -459,15 +621,27 @@ const fetchAllData = async () => {
                   </div>
                 ) : (
                   groupChats.map((group) => (
-                    <div key={group.id} onClick={() => onStartGroupChat(group)} className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-white/5 cursor-pointer transition-all border border-transparent hover:border-white/5">
-                      <div className="w-10 h-10 rounded-xl bg-[#1e2336] flex items-center justify-center text-[#a19bfe] border border-white/5 group-hover:border-[#6d28d9]/50 transition-all shrink-0"><Hash size={20} /></div>
+                    <div 
+                      key={group.id} 
+                      onClick={() => {
+                        setUnreadRooms(prev => { const newSet = new Set(prev); newSet.delete(group.id); return newSet; });
+                        onStartGroupChat(group);
+                      }} 
+                      className={`group flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border ${unreadRooms.has(group.id) ? 'bg-[#6d28d9]/10 border-[#6d28d9]/30 hover:bg-[#6d28d9]/20' : 'border-transparent hover:bg-white/5 hover:border-white/5'}`}
+                    >
+                      <div className={`w-10 h-10 rounded-xl bg-[#1e2336] flex items-center justify-center text-[#a19bfe] border ${unreadRooms.has(group.id) ? 'border-[#a19bfe]' : 'border-white/5 group-hover:border-[#6d28d9]/50'} transition-all shrink-0`}>
+                        <Hash size={20} />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-baseline">
-                          <span className="text-gray-200 text-sm font-bold truncate group-hover:text-white pr-2">{group.name}</span>
-                          <span className="text-[10px] text-gray-600 shrink-0">{group.time}</span>
+                          <span className={`text-sm truncate pr-2 ${unreadRooms.has(group.id) ? 'text-white font-black' : 'text-gray-200 font-bold group-hover:text-white'}`}>{group.name}</span>
+                          <span className={`text-[10px] shrink-0 ${unreadRooms.has(group.id) ? 'text-red-400 font-bold' : 'text-gray-600'}`}>{group.time}</span>
                         </div>
-                        <div className="text-[11px] text-gray-500 truncate group-hover:text-gray-400 transition">{group.subtitle}</div>
+                        <div className={`text-[11px] truncate transition ${unreadRooms.has(group.id) ? 'text-gray-300 font-medium' : 'text-gray-500 group-hover:text-gray-400'}`}>{group.subtitle}</div>
                       </div>
+                      {unreadRooms.has(group.id) && (
+                        <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)] animate-pulse shrink-0 ml-1"></div>
+                      )}
                     </div>
                   ))
                 )}
@@ -485,23 +659,33 @@ const fetchAllData = async () => {
                     No private messages yet.
                   </div>
                 ) : (
-                  directChats.map((msg) => {
-                    const initial = msg.name?.[0]?.toUpperCase() || msg.email?.[0]?.toUpperCase() || '?';
-                    return (
-                      <div key={msg.id} onClick={() => onStartChat({ email: msg.email, name: msg.name, id: msg.id })} className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-white/5 cursor-pointer transition-all border border-transparent hover:border-white/5">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#1e2336] to-[#0a0b1e] border border-white/10 flex items-center justify-center text-white text-xs font-bold group-hover:shadow-[0_0_15px_rgba(109,40,217,0.3)] transition-all shrink-0 overflow-hidden">
-                           {initial}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-baseline">
-                            <span className="text-gray-200 text-sm font-bold truncate group-hover:text-white pr-2">{msg.name}</span>
-                            <span className="text-[10px] text-gray-600 shrink-0">{msg.time}</span>
-                          </div>
-                          <div className="text-[11px] text-gray-500 truncate group-hover:text-gray-400 transition">{msg.subtitle}</div>
-                        </div>
-                      </div>
-                    );
-                  })
+                directChats.map((msg) => {
+                  const initial = msg.name?.[0]?.toUpperCase() || msg.email?.[0]?.toUpperCase() || '?';
+                 return (
+                <div
+                  key={msg.id}
+                  onClick={() => {
+                    setUnreadRooms(prev => { const newSet = new Set(prev); newSet.delete(msg.id); return newSet; });
+                    onStartChat({ email: msg.email, name: msg.name, id: msg.partnerId || msg.id, chatId: msg.id });
+                  }}
+                  className={`group flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border ${unreadRooms.has(msg.id) ? 'bg-[#6d28d9]/10 border-[#6d28d9]/30 hover:bg-[#6d28d9]/20' : 'hover:bg-white/5 border-transparent hover:border-white/5'}`}
+                >
+                  <div className={`w-10 h-10 rounded-full bg-gradient-to-tr from-[#1e2336] to-[#0a0b1e] border ${unreadRooms.has(msg.id) ? 'border-[#a19bfe]' : 'border-white/10'} flex items-center justify-center text-white text-xs font-bold group-hover:shadow-[0_0_15px_rgba(109,40,217,0.3)] transition-all shrink-0 overflow-hidden`}>
+                    {initial}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline">
+                      <span className={`text-sm truncate pr-2 ${unreadRooms.has(msg.id) ? 'text-white font-black' : 'text-gray-200 font-bold group-hover:text-white'}`}>{msg.name}</span>
+                      <span className={`text-[10px] shrink-0 ${unreadRooms.has(msg.id) ? 'text-red-400 font-bold' : 'text-gray-600'}`}>{msg.time}</span>
+                    </div>
+                    <div className={`text-[11px] truncate transition ${unreadRooms.has(msg.id) ? 'text-gray-300 font-medium' : 'text-gray-500 group-hover:text-gray-400'}`}>{msg.subtitle}</div>
+                  </div>
+                  {unreadRooms.has(msg.id) && (
+                    <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)] animate-pulse shrink-0 ml-1"></div>
+                  )}
+                </div>
+              );
+                })
                 )}
               </div>
             </div>

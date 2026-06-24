@@ -310,7 +310,7 @@ const handleAddContact = async (targetIdentifier) => {
                         <Mail size={12} /> {c.email}
                       </p>
                       <p className="text-xs text-[#3b82f6] font-bold tracking-wide flex items-center gap-1.5 mt-1.5">
-                        <Tag size={12} /> @{c.username || c.tag || 'no_tag'}
+                        <Tag size={12} /> @{(c.username || c.tag || 'no_tag').replace(/^@/, '')}
                       </p>
                     </div>
                   </div>
